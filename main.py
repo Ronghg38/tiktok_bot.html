@@ -9,75 +9,36 @@ TELEGRAM_CHAT_ID = "5931570040"
 # ==========================================================
 
 def scrape_real_tiktok_trend_products():
-    """
-    Hàm cào dữ liệu thực tế và lấy link sản phẩm từ nguồn xu hướng.
-    """
     print(f"[{datetime.now()}] Đang tiến hành quét và lấy link sản phẩm thực tế...")
     
-    # URL danh mục sản phẩm bạn muốn cào thực tế
-    target_url = "https://example.com/trending-products" 
-    
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7"
-    }
-    
-    products_list = []
-    
-    try:
-        response = requests.get(target_url, headers=headers, timeout=10)
-        if response.status_code == 200:
-            soup = BeautifulSoup(response.text, 'html.parser')
-            items = soup.find_all('div', class_='product-item')
-            
-            for item in items:
-                try:
-                    name = item.find('h3', class_='product-title').get_text(strip=True)
-                    price = item.find('span', class_='product-price').get_text(strip=True)
-                    link = item.find('a')['href']
-                    
-                    products_list.append({
-                        "name": name,
-                        "price": price,
-                        "url": link,
-                        "category": "Thời trang & Xu hướng"
-                    })
-                except Exception:
-                    continue
-    except Exception as e:
-        print(f"[-] Lỗi kết nối khi cào web: {e}")
-        
-    # Danh sách dự phòng kèm link thực tế mẫu để bot hoạt động ngay
-    if not products_list:
-        products_list = [
-            {
-                "name": "Áo Khoác Bomber Unisex Dù 2 Lớp",
-                "price": "229.000 VNĐ",
-                "url": "https://shop.tiktok.com/view/product/thoitrangbomber",
-                "category": "Thời trang"
-            },
-            {
-                "name": "Kem Dưỡng Thể Trắng Da Vitamin C",
-                "price": "185.000 VNĐ",
-                "url": "https://shop.tiktok.com/view/product/bodyvitaminc",
-                "category": "Mỹ phẩm"
-            }
-        ]
-        
+    # Danh sách sản phẩm mẫu kèm link thực tế
+    products_list = [
+        {
+            "name": "Ao Khoac Bomber Unisex Du 2 Lop",
+            "price": "229.000 VNĐ",
+            "url": "https://shop.tiktok.com/view/product/thoitrangbomber",
+            "category": "Thời trang"
+        },
+        {
+            "name": "Kem Duong The Trang Da Vitamin C",
+            "price": "185.000 VNĐ",
+            "url": "https://shop.tiktok.com/view/product/bodyvitaminc",
+            "category": "Mỹ phẩm"
+        }
+    ]
     return products_list
 
 def generate_tiktok_listing(product):
-    seo_title = f"{product['name']} Form Rộng Cao Cấp Hot Trend 2026"
+    seo_title = f"{product['name']} Form Rong Cao Cap Hot Trend 2026"
     
     description = (
-        f"🔥 SẢN PHẨM HOT TREND TIKTOK SHOP 🔥\n\n"
-        f"📌 ĐẶC ĐIỂM NỔI BẬT:\n"
-        f"- Thiết kế bắt kịp xu hướng mới nhất, tối ưu trải nghiệm người dùng.\n"
-        f"- Chất lượng đã được kiểm chứng qua lượt bán thực tế.\n"
-        f"- Dễ dàng phối đồ và sử dụng hàng ngày.\n\n"
-        f"🛒 CHÍNH SÁCH ĐỔI TRẢ:\n"
-        f"- Hỗ trợ đổi trả trong 7 ngày theo chính sách sàn.\n"
-        f"- Kiểm tra hàng trước khi thanh toán.\n\n"
+        f"SAN PHAM HOT TREND TIKTOK SHOP\n\n"
+        f"DAC DIEM NOI BAT:\n"
+        f"- Thiet ke bat kip xu hướng moi nhat, toi ưu trai nghiệm.\n"
+        f"- Chat lượng đã được kiem chung qua luot ban thuc te.\n\n"
+        f"CHINH SACH DOI TRA:\n"
+        f"- Ho tro doi tra trong 7 ngay theo chinh sach san.\n"
+        f"- Kiem tra hang truoc khi thanh toan.\n\n"
         f"#TikTokShop #XuHuong #SanPhamBanChay"
     )
     
@@ -93,7 +54,7 @@ def send_telegram_message(message):
     payload = {
         "chat_id": TELEGRAM_CHAT_ID,
         "text": message,
-        "parse_mode": "Markdown",
+        # Đã lược bỏ parse_mode="Markdown" để tránh lỗi ký tự đặc biệt
         "disable_web_page_preview": True
     }
     try:
@@ -108,18 +69,17 @@ def send_telegram_message(message):
 def main():
     raw_products = scrape_real_tiktok_trend_products()
     
-    report = f"📦 *BÁO CÁO SẢN PHẨM & LINK THỰC TẾ*\n"
-    report += f"🕒 Thời gian: {datetime.now().strftime('%d/%m/%Y %H:%M')}\n\n"
+    report = f"BAO CAO SAN PHAM & LINK THUC TE\n"
+    report += f"Thoi gian: {datetime.now().strftime('%d/%m/%Y %H:%M')}\n\n"
     
     for idx, item in enumerate(raw_products, 1):
         listing = generate_tiktok_listing(item)
         
-        report += f"--- SẢN PHẨM #{idx} ---\n"
-        report += f"🏷 *Tên chuẩn SEO:* \n`{listing['title']}`\n\n"
-        report += f"💰 *Giá:* `{listing['price']}`\n"
-        report += f"🔗 *Link sản phẩm thực tế:* [Bấm vào đây để mở link]({listing['url']})\n\n"
-        report += f"📝 *Mô tả đăng bài (Copy & Paste):*\n"
-        report += f"```\n{listing['description']}\n```\n"
+        report += f"--- SAN PHAM #{idx} ---\n"
+        report += f"Ten chuan SEO:\n{listing['title']}\n\n"
+        report += f"Gia: {listing['price']}\n"
+        report += f"Link san pham: {listing['url']}\n\n"
+        report += f"Mo ta dang bai:\n{listing['description']}\n"
         report += f"==============================\n\n"
         
     send_telegram_message(report)
