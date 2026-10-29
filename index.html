@@ -1,756 +1,123 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Vòng Quay Vé Số Phát Đạt</title>
-  <style>
-    :root {
-      --gold: #ffd700;
-      --gold-light: #fff3a8;
-      --gold-dark: #b87300;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
-    body {
-      background: radial-gradient(circle at top, #6b0f0f 0%, #240404 65%, #0d0101 100%);
-      color: #fff;
-      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 12px 10px 20px;
-      overflow-x: hidden;
-    }
-
-    .app-container {
-      width: 100%;
-      max-width: 440px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 12px;
-      position: relative;
-    }
-
-    .title-banner {
-      text-align: center;
-      padding: 4px 10px;
-      width: 100%;
-    }
-    .title-banner h1 {
-      font-size: 1.4rem;
-      font-weight: 900;
-      text-transform: uppercase;
-      background: linear-gradient(180deg, #fff8c4 0%, #ffd700 50%, #ff8800 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      filter: drop-shadow(0 2px 6px rgba(0,0,0,0.9));
-      letter-spacing: 0.8px;
-      cursor: pointer;
-    }
-    .title-banner .sub {
-      font-size: 0.78rem;
-      color: #ffcf70;
-      margin-top: 2px;
-      letter-spacing: 0.5px;
-    }
-
-    .status-indicator {
-      font-size: 0.72rem;
-      font-weight: bold;
-      background: rgba(0, 0, 0, 0.4);
-      border: 1px dashed rgba(255, 215, 0, 0.4);
-      border-radius: 12px;
-      padding: 3px 10px;
-      margin-top: 4px;
-      display: inline-block;
-      color: #00e676;
-    }
-    .status-indicator.random-mode {
-      color: #00b0ff;
-      border-color: #00b0ff;
-    }
-    .status-indicator.admin-active {
-      color: #ff9800;
-      border-color: #ff9800;
-    }
-
-    .control-bar {
-      display: none;
-      width: 100%;
-      background: rgba(15, 3, 3, 0.95);
-      border: 1.5px solid var(--gold);
-      border-radius: 10px;
-      padding: 8px 10px;
-      flex-wrap: wrap;
-      justify-content: space-between;
-      align-items: center;
-      gap: 6px;
-      font-size: 0.78rem;
-      z-index: 20;
-    }
-    .control-bar.secret-open { display: flex; }
-    .control-bar label { color: var(--gold); font-weight: bold; }
-    .control-bar select {
-      flex: 1;
-      background: #2b0909;
-      color: #fff;
-      border: 1px solid var(--gold);
-      border-radius: 6px;
-      padding: 5px 8px;
-      font-weight: bold;
-      outline: none;
-    }
-
-    .editor-panel {
-      display: none;
-      width: 100%;
-      background: rgba(22, 5, 5, 0.96);
-      border: 1.5px solid var(--gold);
-      border-radius: 12px;
-      padding: 10px;
-      z-index: 20;
-    }
-    .editor-panel.open { display: block; }
-    .editor-row {
-      display: grid;
-      grid-template-columns: 1.8fr 0.8fr 0.8fr;
-      gap: 6px;
-      margin-bottom: 6px;
-      align-items: center;
-    }
-    .editor-row input {
-      width: 100%;
-      background: #2e0c0c;
-      color: #fff;
-      border: 1px solid #8c5818;
-      border-radius: 6px;
-      padding: 6px 8px;
-      font-size: 0.8rem;
-    }
-    .editor-header {
-      font-size: 0.72rem;
-      color: var(--gold);
-      font-weight: bold;
-      margin-bottom: 4px;
-    }
-    .editor-actions {
-      display: flex;
-      gap: 6px;
-      margin-top: 6px;
-    }
-    .btn-edit {
-      background: linear-gradient(180deg, #ffd700, #cc8800);
-      color: #240800;
-      border: none;
-      border-radius: 6px;
-      padding: 6px 10px;
-      font-weight: 800;
-      font-size: 0.75rem;
-      cursor: pointer;
-    }
-
-    .stats-bar {
-      width: 100%;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-    }
-    .stat-card {
-      background: linear-gradient(180deg, #3d0a0a 0%, #1a0303 100%);
-      border: 1.5px solid #b57c1e;
-      border-radius: 12px;
-      padding: 8px 10px;
-      text-align: center;
-      box-shadow: inset 0 0 10px rgba(0,0,0,0.8), 0 3px 8px rgba(0,0,0,0.4);
-    }
-    .stat-card .lbl {
-      font-size: 0.68rem;
-      color: #e6c17a;
-      font-weight: 700;
-      text-transform: uppercase;
-    }
-    .stat-card .val {
-      font-size: 1.15rem;
-      font-weight: 900;
-      color: var(--gold);
-      margin-top: 2px;
-      text-shadow: 0 1px 4px #000;
-    }
-
-    .wheel-stage {
-      position: relative;
-      width: 356px;
-      height: 356px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      margin: 4px 0;
-    }
-    .outer-rim {
-      position: absolute;
-      inset: 0;
-      border-radius: 50%;
-      background: radial-gradient(circle, #5c2c06 60%, #ffd700 68%, #995c00 72%, #3d1b02 100%);
-      padding: 16px;
-      box-shadow: 0 0 35px rgba(255, 185, 0, 0.55), inset 0 0 15px #000;
-    }
-    .wheel-canvas-wrap {
-      width: 100%;
-      height: 100%;
-      border-radius: 50%;
-      overflow: hidden;
-      border: 3px solid #ffe680;
-      box-shadow: inset 0 0 18px rgba(0,0,0,0.9);
-      position: relative;
-    }
-    canvas#wheelCanvas {
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
-
-    .pointer {
-      position: absolute;
-      top: -12px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 40px;
-      height: 50px;
-      z-index: 12;
-      filter: drop-shadow(0 5px 5px rgba(0,0,0,0.85));
-      transform-origin: 50% 12px;
-      transition: transform 0.06s ease-out;
-    }
-    .pointer.flick {
-      transform: translateX(-50%) rotate(-24deg);
-    }
-
-    .center-spin-btn {
-      position: absolute;
-      width: 72px;
-      height: 72px;
-      border-radius: 50%;
-      background: radial-gradient(circle at 35% 30%, #fff8bd 0%, #ffc400 45%, #b35900 90%, #5e2800 100%);
-      border: 3.5px solid #fff;
-      box-shadow: 0 0 0 3px #b87300, 0 6px 18px rgba(0,0,0,0.95), inset 0 2px 5px #fff;
-      color: #3d0800;
-      font-weight: 900;
-      font-size: 1rem;
-      letter-spacing: 0.5px;
-      cursor: pointer;
-      z-index: 10;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      text-shadow: 0 1px 1px rgba(255,255,255,0.8);
-      transition: transform 0.15s ease, filter 0.2s;
-    }
-    .center-spin-btn:active { transform: scale(0.92); }
-    .center-spin-btn:disabled {
-      filter: grayscale(0.55) brightness(0.85);
-      cursor: not-allowed;
-    }
-
-    .result-banner {
-      width: 100%;
-      min-height: 46px;
-      background: linear-gradient(90deg, #2e0505, #6e0e0e, #2e0505);
-      border: 2px solid var(--gold);
-      border-radius: 25px;
-      padding: 8px 16px;
-      text-align: center;
-      font-weight: 800;
-      font-size: 0.96rem;
-      color: #fff2b2;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.65);
-      transition: all 0.3s ease;
-    }
-    .result-banner.winner {
-      background: linear-gradient(90deg, #994d00, #ffd000, #994d00);
-      color: #240400;
-      font-size: 1.05rem;
-      box-shadow: 0 0 22px #ffd700;
-      transform: scale(1.02);
-    }
-
-    .history-box {
-      width: 100%;
-      background: rgba(0, 0, 0, 0.45);
-      border: 1px solid #633212;
-      border-radius: 10px;
-      padding: 8px 12px;
-      max-height: 115px;
-      overflow-y: auto;
-      font-size: 0.8rem;
-    }
-    .history-item {
-      display: flex;
-      justify-content: space-between;
-      padding: 4px 0;
-      border-bottom: 1px dashed rgba(255,255,255,0.12);
-      color: #ffe0a3;
-    }
-
-    .confetti {
-      position: fixed;
-      width: 9px;
-      height: 14px;
-      top: -20px;
-      z-index: 99;
-      pointer-events: none;
-      animation: fallDown 2.6s linear forwards;
-    }
-    @keyframes fallDown {
-      to {
-        transform: translateY(105vh) rotate(720deg);
-        opacity: 0;
-      }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Soi Cầu Xổ Số Miền Nam</title>
+    <!-- Tailwind CSS CDN cho giao diện đẹp, chuẩn mobile -->
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
+<body class="bg-slate-100 text-slate-800 min-h-screen p-4">
+    <div class="max-w-2xl mx-auto bg-white shadow-lg rounded-2xl p-6 mt-4">
+        <h1 class="text-2xl font-bold text-center text-indigo-600 mb-2">🎯 Soi Cầu XSMN Tự Động</h1>
+        <p class="text-sm text-center text-slate-500 mb-6">Thuật toán ghép vị trí tìm biên độ cầu chạy liên tục</p>
 
-<div class="app-container">
-  <div class="title-banner">
-    <h1 onclick="secretAdminTrigger()">🎡 Vòng Quay Vé Số Phát Đạt</h1>
-    <div class="sub">✨ Quay Liền Tay — Rước Ngay Lộc Lớn ✨</div>
-    <!-- Đã bỏ hoàn toàn các con số ở dòng trạng thái -->
-    <div class="status-indicator" id="statusIndicator">🍀 Đang chạy lộc May Mắn</div>
-  </div>
+        <!-- Nút điều khiển -->
+        <div class="flex gap-3 mb-6">
+            <button onclick="chaySoiCau()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-xl shadow transition duration-200">
+                🚀 Chạy Soi Cầu Ngay
+            </button>
+        </div>
 
-  <div class="control-bar" id="secretControlBar">
-    <label for="forceSelect">🎯 Chế độ ra giải:</label>
-    <select id="forceSelect">
-      <option value="-1">🎲 Ngẫu nhiên theo Tỷ lệ %</option>
-    </select>
-  </div>
-
-  <div class="editor-panel" id="editorPanel">
-    <div class="editor-row editor-header">
-      <span>Tên ô thưởng</span>
-      <span>Số vé cộng</span>
-      <span>Tỷ lệ trọng số</span>
-    </div>
-    <div id="editorRows"></div>
-    <div class="editor-actions">
-      <button class="btn-edit" style="flex:1.2; padding:8px;" onclick="saveEditor()">💾 LƯU CẬP NHẬT</button>
-      <button class="btn-edit" style="background:#0288d1; color:#fff; flex:1; padding:8px;" onclick="randomizeWeights()">🎲 Ngẫu nhiên</button>
-      <button class="btn-edit" style="background:#555; color:#fff; flex:1; padding:8px;" onclick="resetDefaultPrizes()">🔄 Mặc định</button>
-    </div>
-  </div>
-
-  <div class="stats-bar">
-    <div class="stat-card">
-      <div class="lbl">🎫 Tổng Vé Số Nhận Được</div>
-      <div class="val" id="totalTicketsEl">0 Vé</div>
-    </div>
-    <div class="stat-card">
-      <div class="lbl">🎁 Phần Thưởng Vừa Trúng</div>
-      <div class="val" id="lastPrizeEl" style="font-size:0.95rem; color:#fff;">Chưa quay</div>
-    </div>
-  </div>
-
-  <div class="wheel-stage">
-    <svg class="pointer" id="pointerEl" viewBox="0 0 40 52">
-      <polygon points="20,50 4,14 36,14" fill="#ff1e00" stroke="#ffd700" stroke-width="3"/>
-      <circle cx="20" cy="14" r="9" fill="#ffd700" stroke="#fff" stroke-width="2.5"/>
-    </svg>
-
-    <div class="outer-rim">
-      <div class="wheel-canvas-wrap">
-        <canvas id="wheelCanvas" width="540" height="540"></canvas>
-      </div>
+        <!-- Khu vực hiển thị kết quả -->
+        <div id="loading" class="hidden text-center py-4 text-slate-500 animate-pulse">Đang phân tích dữ liệu các kỳ quay...</div>
+        
+        <div id="result-container" class="space-y-3">
+            <!-- Kết quả sẽ hiện ở đây -->
+        </div>
     </div>
 
-    <button class="center-spin-btn" id="spinBtn" onclick="startSpin()">QUAY</button>
-  </div>
+    <script>
+        // Mẫu dữ liệu kết quả các kỳ quay gần nhất (Giải 8 đến Giải ĐB)
+        const sampleData = [
+            { date: "2026-10-25", numbers: ["42", "153", "8492", "1029", "58392", "49102", "85923", "19402", "759203"] },
+            { date: "2026-10-26", numbers: ["92", "840", "1932", "5830", "92830", "48201", "01938", "58392", "849201"] },
+            { date: "2026-10-27", numbers: ["01", "948", "2019", "4820", "10398", "58392", "29103", "84920", "938201"] },
+            { date: "2026-10-28", numbers: ["83", "201", "5839", "1039", "84920", "19382", "58390", "29104", "103928"] }
+        ];
 
-  <div class="result-banner" id="resultBanner">
-    Bấm nút QUAY ở giữa để thử vận may!
-  </div>
+        function flattenPositions(numbersList) {
+            let flatDigits = [];
+            numbersList.forEach(num => {
+                String(num).split('').forEach(char => {
+                    flatDigits.push(parseInt(char));
+                });
+            });
+            return flatDigits;
+        }
 
-  <div class="history-box" id="historyBox">
-    <div style="color:#aaa; text-align:center;">Chưa có lịch sử quay</div>
-  </div>
-</div>
+        function chaySoiCau() {
+            const loading = document.getElementById('loading');
+            const container = document.getElementById('result-container');
+            
+            loading.classList.remove('hidden');
+            container.innerHTML = '';
 
-<script>
-  const DEFAULT_PRIZES = [
-    { label: '🎁 ĐẶC BIỆT Hoàn Vé', tickets: 1, weight: 0,  color: '#b80f0a', text: '#ffd700' },
-    { label: '💵 Trúng 3 vé số',     tickets: 3, weight: 0,  color: '#fff3d1', text: '#6e0d05' },
-    { label: '💎 Trúng 4 Vé Số',     tickets: 4, weight: 0,  color: '#d46b08', text: '#ffffff' },
-    { label: '🍀 May Mắn Lần Sau',   tickets: 0, weight: 50, color: '#2b1204', text: '#f0c27b' },
-    { label: '💰 Trúng 5 vé số',     tickets: 5, weight: 0,  color: '#8f0b0b', text: '#ffd700' },
-    { label: '🎫 Tặng 2 Vé Số',      tickets: 2, weight: 0,  color: '#fff3d1', text: '#6e0d05' },
-    { label: '💸 Tặng 1 Vé Số',      tickets: 1, weight: 1,  color: '#b55400', text: '#ffffff' },
-    { label: '🪙 Thêm 1 lượt',       tickets: 0, weight: 49, color: '#3b0909', text: '#ffd700', isExtraSpin: true }
-  ];
+            setTimeout(() => {
+                loading.classList.add('hidden');
+                
+                let processedDays = sampleData.map(day => flattenPositions(day.numbers));
+                let numDays = processedDays.length;
+                let totalPositions = processedDays[0].length;
+                let cauDep = [];
 
-  let PRIZES = JSON.parse(localStorage.getItem('PHAT_DAT_WHEEL_V11')) || JSON.parse(JSON.stringify(DEFAULT_PRIZES));
+                // Thuật toán quét cặp vị trí
+                for (let i = 0; i < totalPositions; i++) {
+                    for (let j = i + 1; j < totalPositions; j++) {
+                        let bienDo = 0;
+                        for (let dayIdx = 0; dayIdx < numDays - 1; dayIdx++) {
+                            let d1 = processedDays[dayIdx][i];
+                            let d2 = processedDays[dayIdx][j];
+                            let loChuan = `${d1}${d2}`;
+                            let loLon = `${d2}${d1}`;
+                            
+                            let nextDayStr = processedDays[dayIdx + 1].join('');
+                            
+                            if (nextDayStr.includes(loChuan) || nextDayStr.includes(loLon)) {
+                                bienDo++;
+                            } else {
+                                break;
+                            }
+                        }
 
-  const canvas = document.getElementById('wheelCanvas');
-  const ctx = canvas.getContext('2d');
-  const pointerEl = document.getElementById('pointerEl');
-  const spinBtn = document.getElementById('spinBtn');
-  const resultBanner = document.getElementById('resultBanner');
-  const statusIndicator = document.getElementById('statusIndicator');
+                        if (bienDo >= 2) { // Lọc biên độ >= 2
+                            let lastD1 = processedDays[processedDays.length - 1][i];
+                            let lastD2 = processedDays[processedDays.length - 1][j];
+                            
+                            cauDep.push({
+                                viTri: `Vị trí [${i}] & [${j}]`,
+                                bienDo: bienDo,
+                                duDoan: `${lastD1}${lastD2} (Lộn: ${lastD2}${lastD1})`
+                            });
+                        }
+                    }
+                }
 
-  let currentAngle = 0;
-  let isSpinning = false;
-  let totalTickets = 0;
-  let historyList = [];
+                // Sắp xếp theo biên độ giảm dần
+                cauDep.sort((a, b) => b.bienDo - a.bienDo);
 
-  let secretTapCount = 0;
-  let secretTapTimer = null;
-  function secretAdminTrigger() {
-    secretTapCount++;
-    clearTimeout(secretTapTimer);
-    if (secretTapCount >= 5) {
-      secretTapCount = 0;
-      const bar = document.getElementById('secretControlBar');
-      const panel = document.getElementById('editorPanel');
-      bar.classList.toggle('secret-open');
-      panel.classList.toggle('open');
-      updateStatusDisplay();
-    } else {
-      secretTapTimer = setTimeout(() => { secretTapCount = 0; }, 1200);
-    }
-  }
-
-  function updateStatusDisplay() {
-    const panel = document.getElementById('editorPanel');
-    const isOpen = panel.classList.contains('open');
-    if (isOpen) {
-      statusIndicator.textContent = '⚙️ Đang mở Bảng Quản Lý Tỷ Lệ (Chế độ ẩn)';
-      statusIndicator.className = 'status-indicator admin-active';
-    } else {
-      const isDefault = PRIZES[3].weight === 50 && PRIZES[7].weight === 49 && PRIZES[6].weight === 1;
-      if (isDefault) {
-        statusIndicator.textContent = '🍀 Đang chạy lộc May Mắn';
-        statusIndicator.className = 'status-indicator';
-      } else {
-        statusIndicator.textContent = '🎲 Đang quay tỷ lệ May Mắn ngẫu nhiên';
-        statusIndicator.className = 'status-indicator random-mode';
-      }
-    }
-  }
-
-  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  function playTickSound() {
-    try {
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(720, audioCtx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(190, audioCtx.currentTime + 0.04);
-      gain.gain.setValueAtTime(0.16, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.04);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + 0.04);
-    } catch (e) {}
-  }
-
-  function playWinFanfare(isBigWin) {
-    try {
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-      const notes = isBigWin ? [523.25, 659.25, 783.99, 1046.5] : [440, 554.37, 659.25];
-      notes.forEach((freq, idx) => {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, audioCtx.currentTime + idx * 0.12);
-        gain.gain.setValueAtTime(0.2, audioCtx.currentTime + idx * 0.12);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + idx * 0.12 + 0.35);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start(audioCtx.currentTime + idx * 0.12);
-        osc.stop(audioCtx.currentTime + idx * 0.12 + 0.35);
-      });
-    } catch (e) {}
-  }
-
-  function parsePrizeText(rawLabel) {
-    const trimmed = (rawLabel || '').trim();
-    const parts = trimmed.split(/\s+/);
-    let icon = '';
-    let words = parts;
-
-    if (parts.length > 1 && /[^\w\sÀ-ỹ]/u.test(parts[0])) {
-      icon = parts[0];
-      words = parts.slice(1);
-    }
-
-    if (words.length <= 2) {
-      return { icon, line1: words.join(' '), line2: '' };
-    }
-    const mid = Math.ceil(words.length / 2);
-    return {
-      icon,
-      line1: words.slice(0, mid).join(' '),
-      line2: words.slice(mid).join(' ')
-    };
-  }
-
-  function drawWheel() {
-    const N = PRIZES.length;
-    const arc = (2 * Math.PI) / N;
-    const cx = canvas.width / 2;
-    const cy = canvas.height / 2;
-    const radius = cx - 6;
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    for (let i = 0; i < N; i++) {
-      const start = currentAngle + i * arc;
-      const end = start + arc;
-      const midAngle = start + arc / 2;
-
-      ctx.beginPath();
-      ctx.moveTo(cx, cy);
-      ctx.arc(cx, cy, radius, start, end);
-      ctx.closePath();
-      ctx.fillStyle = PRIZES[i].color;
-      ctx.fill();
-
-      ctx.lineWidth = 3.5;
-      ctx.strokeStyle = '#ffd700';
-      ctx.stroke();
-
-      const { icon, line1, line2 } = parsePrizeText(PRIZES[i].label);
-
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.rotate(midAngle);
-
-      if (icon) {
-        ctx.font = '28px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(icon, 214, 0);
-      }
-
-      const textCenterR = icon ? 136 : 154;
-      const maxTextWidth = 112;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.font = '900 20px "Segoe UI", Roboto, sans-serif';
-
-      ctx.shadowColor = PRIZES[i].color === '#fff3d1' ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.85)';
-      ctx.shadowBlur = 4;
-      ctx.fillStyle = PRIZES[i].text;
-
-      if (line2) {
-        ctx.fillText(line1, textCenterR, -11, maxTextWidth);
-        ctx.fillText(line2, textCenterR, 12, maxTextWidth);
-      } else {
-        ctx.fillText(line1, textCenterR, 0, maxTextWidth);
-      }
-      ctx.restore();
-
-      const pegX = cx + Math.cos(start) * (radius - 7);
-      const pegY = cy + Math.sin(start) * (radius - 7);
-      ctx.beginPath();
-      ctx.arc(pegX, pegY, 6.5, 0, 2 * Math.PI);
-      ctx.fillStyle = '#fff9d6';
-      ctx.fill();
-      ctx.lineWidth = 2.5;
-      ctx.strokeStyle = '#995c00';
-      ctx.stroke();
-    }
-  }
-
-  function pickWinnerIndex() {
-    const forced = parseInt(document.getElementById('forceSelect').value, 10);
-    if (forced >= 0 && forced < PRIZES.length) {
-      return forced;
-    }
-    const totalWeight = PRIZES.reduce((sum, p) => sum + Math.max(0, Number(p.weight) || 0), 0);
-    let r = Math.random() * totalWeight;
-    for (let i = 0; i < PRIZES.length; i++) {
-      const w = Math.max(0, Number(PRIZES[i].weight) || 0);
-      if (r < w) return i;
-      r -= w;
-    }
-    return 0;
-  }
-
-  function easeOutQuint(t) {
-    return 1 - Math.pow(1 - t, 5);
-  }
-
-  function startSpin() {
-    if (isSpinning) return;
-
-    isSpinning = true;
-    spinBtn.disabled = true;
-
-    resultBanner.classList.remove('winner');
-    resultBanner.textContent = '🎡 Vòng quay đang chạy chậm dần...';
-
-    const N = PRIZES.length;
-    const arc = (2 * Math.PI) / N;
-    const winIdx = pickWinnerIndex();
-
-    const randomInSector = (Math.random() - 0.5) * 0.52;
-    const pointerAngle = -Math.PI / 2;
-    let targetMod = (pointerAngle - (winIdx + 0.5 + randomInSector) * arc) % (2 * Math.PI);
-    if (targetMod < 0) targetMod += 2 * Math.PI;
-
-    let currentMod = currentAngle % (2 * Math.PI);
-    if (currentMod < 0) currentMod += 2 * Math.PI;
-
-    let delta = targetMod - currentMod;
-    if (delta < 0) delta += 2 * Math.PI;
-
-    const fullSpins = 8 * 2 * Math.PI;
-    const totalRotation = fullSpins + delta;
-    const startAngle = currentAngle;
-    const duration = 6800;
-    const startTime = performance.now();
-
-    let lastPegIndex = Math.floor(((startAngle - pointerAngle) / arc));
-
-    function animateFrame(now) {
-      const elapsed = now - startTime;
-      const progress = Math.min(1, elapsed / duration);
-      const eased = easeOutQuint(progress);
-
-      currentAngle = startAngle + totalRotation * eased;
-      drawWheel();
-
-      const currentPegIndex = Math.floor(((currentAngle - pointerAngle) / arc));
-      if (currentPegIndex !== lastPegIndex) {
-        lastPegIndex = currentPegIndex;
-        playTickSound();
-        pointerEl.classList.add('flick');
-        setTimeout(() => pointerEl.classList.remove('flick'), 55);
-      }
-
-      if (progress < 1) {
-        requestAnimationFrame(animateFrame);
-      } else {
-        finishSpin(winIdx);
-      }
-    }
-
-    requestAnimationFrame(animateFrame);
-  }
-
-  function spawnConfetti() {
-    const colors = ['#ffd700', '#ff3b30', '#00e676', '#fff', '#ff9500'];
-    for (let i = 0; i < 28; i++) {
-      const el = document.createElement('div');
-      el.className = 'confetti';
-      el.style.left = Math.random() * 100 + 'vw';
-      el.style.background = colors[Math.floor(Math.random() * colors.length)];
-      el.style.animationDuration = (1.8 + Math.random() * 1.2) + 's';
-      document.body.appendChild(el);
-      setTimeout(() => el.remove(), 3000);
-    }
-  }
-
-  function finishSpin(winIdx) {
-    const prize = PRIZES[winIdx];
-    const cleanName = prize.label;
-    document.getElementById('lastPrizeEl').textContent = cleanName;
-
-    if (prize.tickets > 0) {
-      totalTickets += prize.tickets;
-      playWinFanfare(prize.tickets >= 3);
-      spawnConfetti();
-      resultBanner.classList.add('winner');
-      resultBanner.textContent = `🎉 CHÚC MỪNG! BẠN NHẬN ĐƯỢC: ${cleanName}`;
-    } else if (prize.isExtraSpin || cleanName.toLowerCase().includes('thêm')) {
-      playWinFanfare(false);
-      resultBanner.classList.add('winner');
-      resultBanner.textContent = `🎁 TUYỆT VỜI! ${cleanName.toUpperCase()} — QUAY TIẾP NGAY!`;
-    } else {
-      resultBanner.textContent = `🍀 Kết quả: ${cleanName} — Chúc bạn may mắn ở lượt kế tiếp!`;
-    }
-
-    const timeStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    historyList.unshift({ time: timeStr, label: cleanName });
-    renderHistory();
-    updateStatsUI();
-
-    isSpinning = false;
-    spinBtn.disabled = false;
-  }
-
-  function updateStatsUI() {
-    document.getElementById('totalTicketsEl').textContent = totalTickets + ' Vé';
-  }
-
-  function renderHistory() {
-    const box = document.getElementById('historyBox');
-    box.innerHTML = historyList.slice(0, 8).map((item, i) => `
-      <div class="history-item">
-        <span>Lần #${historyList.length - i} (${item.time})</span>
-        <strong>${item.label}</strong>
-      </div>
-    `).join('');
-  }
-
-  function populateControls() {
-    const sel = document.getElementById('forceSelect');
-    const currentVal = sel.value;
-    sel.innerHTML = `<option value="-1">🎲 Ngẫu nhiên theo Tỷ lệ %</option>` +
-      PRIZES.map((p, idx) => `<option value="${idx}">🎯 Ép trúng: ${p.label}</option>`).join('');
-    sel.value = currentVal || "-1";
-
-    const rowsEl = document.getElementById('editorRows');
-    rowsEl.innerHTML = PRIZES.map((p, idx) => `
-      <div class="editor-row">
-        <input type="text" id="lbl_${idx}" value="${p.label}">
-        <input type="number" id="tkt_${idx}" value="${p.tickets}">
-        <input type="number" id="wei_${idx}" value="${p.weight}">
-      </div>
-    `).join('');
-  }
-
-  function saveEditor() {
-    PRIZES.forEach((p, idx) => {
-      p.label = document.getElementById(`lbl_${idx}`).value || p.label;
-      p.tickets = parseInt(document.getElementById(`tkt_${idx}`).value, 10) || 0;
-      p.weight = parseFloat(document.getElementById(`wei_${idx}`).value) || 0;
-    });
-    localStorage.setItem('PHAT_DAT_WHEEL_V11', JSON.stringify(PRIZES));
-    populateControls();
-    drawWheel();
-    updateStatusDisplay();
-    resultBanner.textContent = '✅ Đã lưu cố định danh sách giải thưởng!';
-  }
-
-  function randomizeWeights() {
-    PRIZES.forEach((p, idx) => {
-      p.weight = Math.floor(Math.random() * 26) + 5;
-    });
-    populateControls();
-    drawWheel();
-    updateStatusDisplay();
-    resultBanner.textContent = '🎲 Đã trộn tỷ lệ May Mắn ngẫu nhiên!';
-  }
-
-  function resetDefaultPrizes() {
-    localStorage.removeItem('PHAT_DAT_WHEEL_V11');
-    PRIZES = JSON.parse(JSON.stringify(DEFAULT_PRIZES));
-    populateControls();
-    drawWheel();
-    updateStatusDisplay();
-    resultBanner.textContent = '🔄 Đã khôi phục lộc May Mắn!';
-  }
-
-  populateControls();
-  drawWheel();
-  updateStatusDisplay();
-</script>
+                if (cauDep.length > 0) {
+                    let html = `<h2 class="font-semibold text-slate-700 mb-2">🔥 Top Đường Cầu Đẹp Nhất:</h2>`;
+                    cauDep.slice(0, 5).forEach((item, index) => {
+                        html += `
+                            <div class="bg-slate-50 border border-slate-200 p-4 rounded-xl flex justify-between items-center">
+                                <div>
+                                    <span class="inline-block bg-indigo-100 text-indigo-700 text-xs font-bold px-2 py-1 rounded-md mb-1">${item.viTri}</span>
+                                    <p class="text-lg font-bold text-slate-800">Cặp số: <span class="text-rose-600">${item.duDoan}</span></p>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-xs text-slate-500 block">Biên độ</span>
+                                    <span class="text-lg font-extrabold text-emerald-600">${item.bienDo} ngày</span>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = `<p class="text-center text-amber-600">Không tìm thấy đường cầu phù hợp trong dữ liệu mẫu.</p>`;
+                }
+            }, 400);
+        }
+    </script>
 </body>
 </html>
