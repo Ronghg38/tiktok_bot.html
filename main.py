@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 
 # ==================== CẤU HÌNH TÀI KHOẢN CỦA BẠN ====================
-TELEGRAM_BOT_TOKEN = "8998633458:AAGhkWhDPNp-Iy8f96gyACYvSM1DV6NCNpk"
+TELEGRAM_BOT_TOKEN = "9032299426:AAHlXiRdw-BFO3gKtJ7ruAUPkWpUEU3QbUM"
 TELEGRAM_CHAT_ID = "5931570040"
 # ==========================================================
 
@@ -54,7 +54,6 @@ def send_telegram_message(message):
     payload = {
         "chat_id": TELEGRAM_CHAT_ID,
         "text": message,
-        # Đã lược bỏ parse_mode="Markdown" để tránh lỗi ký tự đặc biệt
         "disable_web_page_preview": True
     }
     try:
