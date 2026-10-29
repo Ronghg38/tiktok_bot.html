@@ -89,22 +89,32 @@ def send_telegram_message(message):
         print(f"[-] Lỗi kết nối Telegram: {e}")
 
 def main():
-    raw_products = scrape_real_time_trending_products()
-    
-    report = f"🔄 CAP NHAT DU LIEU THOI GIAN THUC (REAL-TIME)\n"
-    report += f"🕒 Thoi gian quet: {datetime.now().strftime('%d/%m/%Y %H:%M')}\n\n"
-    
-    for idx, item in enumerate(raw_products, 1):
-        listing = generate_tiktok_listing(item)
-        
-        report += f"--- SAN PHAM #{idx} ---\n"
-        report += f"Ten chuan SEO:\n{listing['title']}\n\n"
-        report += f"Gia: {listing['price']}\n"
-        report += f"Link tim kiem TikTok: {listing['url']}\n\n"
-        report += f"Mo ta dang bai:\n{listing['description']}\n"
-        report += f"==============================\n\n"
-        
-    send_telegram_message(report)
+    print("[+] Bot TikTok tự động đã khởi động và đang chạy ngầm 24/7...")
+    while True:
+        try:
+            raw_products = scrape_real_time_trending_products()
+            
+            report = f"🔄 CAP NHAT DU LIEU THOI GIAN THUC (REAL-TIME)\n"
+            report += f"🕒 Thoi gian quet: {datetime.now().strftime('%d/%m/%Y %H:%M')}\n\n"
+            
+            for idx, item in enumerate(raw_products, 1):
+                listing = generate_tiktok_listing(item)
+                
+                report += f"--- SAN PHAM #{idx} ---\n"
+                report += f"Ten chuan SEO:\n{listing['title']}\n\n"
+                report += f"Gia: {listing['price']}\n"
+                report += f"Link tim kiem TikTok: {listing['url']}\n\n"
+                report += f"Mo ta dang bai:\n{listing['description']}\n"
+                report += f"==============================\n\n"
+                
+            send_telegram_message(report)
+            
+        except Exception as e:
+            print(f"[-] Lỗi vòng lặp chính: {e}")
+            
+        # Nghỉ 3 giờ (10800 giây) trước khi quét lại đợt tiếp theo
+        print("[+] Đang chờ lịch quét tiếp theo...")
+        time.sleep(10800)
 
 if __name__ == "__main__":
     main()
