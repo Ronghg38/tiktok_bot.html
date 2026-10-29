@@ -3,38 +3,74 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hệ Thống Soi Cầu Xổ Số Miền Nam</title>
-    <!-- Tailwind CSS CDN cho giao diện đẹp, chuẩn mobile -->
+    <title>Hệ Thống Soi Cầu XSMN Theo Đài</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen p-4">
-    <div class="max-w-2xl mx-auto bg-white shadow-lg rounded-2xl p-6 mt-4">
-        <h1 class="text-2xl font-bold text-center text-indigo-600 mb-2">🎯 Soi Cầu XSMN Tự Động</h1>
-        <p class="text-sm text-center text-slate-500 mb-6">Thuật toán ghép vị trí tìm biên độ cầu chạy liên tục</p>
+    <div class="max-w-xl mx-auto bg-white shadow-lg rounded-2xl p-6 mt-4">
+        <h1 class="text-2xl font-bold text-center text-indigo-600 mb-1">🎯 Soi Cầu XSMN Theo Đài</h1>
+        <p class="text-xs text-center text-slate-500 mb-6">Chọn đài cụ thể để phân tích biên độ cầu chạy chính xác</p>
+
+        <!-- Form chọn đài -->
+        <div class="mb-4">
+            <label class="block text-sm font-semibold text-slate-700 mb-2">Chọn Đài (Tỉnh Miền Nam):</label>
+            <select id="provinceSelect" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="hcm">TP. Hồ Chí Minh (Hồ Chí Minh)</option>
+                <option value="longan">Long An</option>
+                <option value="binhduong">Bình Dương</option>
+                <option value="vungtau">Vũng Tàu</option>
+                <option value="cantho">Cần Thơ</option>
+                <option value="dongnai">Đồng Nai</option>
+            </select>
+        </div>
 
         <!-- Nút điều khiển -->
-        <div class="flex gap-3 mb-6">
-            <button onclick="chaySoiCau()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-xl shadow transition duration-200">
-                🚀 Chạy Soi Cầu Ngay
+        <div class="mb-6">
+            <button onclick="chaySoiCauTheoDai()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-xl shadow transition duration-200">
+                🚀 Chạy Soi Cầu Đài Này
             </button>
         </div>
 
         <!-- Khu vực hiển thị kết quả -->
-        <div id="loading" class="hidden text-center py-4 text-slate-500 animate-pulse">Đang phân tích dữ liệu các kỳ quay...</div>
+        <div id="loading" class="hidden text-center py-4 text-slate-500 animate-pulse">Đang phân tích dữ liệu đài đã chọn...</div>
         
         <div id="result-container" class="space-y-3">
-            <!-- Kết quả sẽ hiện ở đây -->
+            <p class="text-center text-slate-400 text-sm">Nhấn nút "Chạy Soi Cầu" để xem kết quả phân tích.</p>
         </div>
     </div>
 
     <script>
-        // Mẫu dữ liệu kết quả các kỳ quay gần nhất (Giải 8 đến Giải ĐB)
-        const sampleData = [
-            { date: "2026-10-25", numbers: ["42", "153", "8492", "1029", "58392", "49102", "85923", "19402", "759203"] },
-            { date: "2026-10-26", numbers: ["92", "840", "1932", "5830", "92830", "48201", "01938", "58392", "849201"] },
-            { date: "2026-10-27", numbers: ["01", "948", "2019", "4820", "10398", "58392", "29103", "84920", "938201"] },
-            { date: "2026-10-28", numbers: ["83", "201", "5839", "1039", "84920", "19382", "58390", "29104", "103928"] }
-        ];
+        // Cơ sở dữ liệu mẫu theo từng đài (Bạn có thể mở rộng hoặc thay thế bằng API thực tế)
+        const databaseMienNam = {
+            "hcm": {
+                name: "TP. Hồ Chí Minh",
+                data: [
+                    { date: "2026-10-25", numbers: ["42", "153", "8492", "1029", "58392", "49102", "85923", "19402", "759203"] },
+                    { date: "2026-10-26", numbers: ["92", "840", "1932", "5830", "92830", "48201", "01938", "58392", "849201"] },
+                    { date: "2026-10-27", numbers: ["01", "948", "2019", "4820", "10398", "58392", "29103", "84920", "938201"] },
+                    { date: "2026-10-28", numbers: ["83", "201", "5839", "1039", "84920", "19382", "58390", "29104", "103928"] }
+                ]
+            },
+            "longan": {
+                name: "Long An",
+                data: [
+                    { date: "2026-10-24", numbers: ["15", "928", "3829", "4920", "10392", "58392", "29103", "84920", "482019"] },
+                    { date: "2026-10-25", numbers: ["67", "301", "8492", "1938", "58392", "10392", "84920", "29104", "938201"] },
+                    { date: "2026-10-26", numbers: ["49", "583", "1039", "5830", "29103", "84920", "19382", "58390", "103928"] },
+                    { date: "2026-10-27", numbers: ["90", "192", "4820", "2910", "84920", "58392", "10398", "49102", "859231"] }
+                ]
+            },
+            "cantho": {
+                name: "Cần Thơ",
+                data: [
+                    { date: "2026-10-23", numbers: ["33", "501", "9283", "4820", "10392", "58392", "29103", "84920", "193820"] },
+                    { date: "2026-10-24", numbers: ["88", "129", "5839", "1039", "84920", "19382", "58390", "29104", "482019"] },
+                    { date: "2026-10-25", numbers: ["12", "840", "1932", "5830", "92830", "48201", "01938", "58392", "849201"] },
+                    { date: "2026-10-26", numbers: ["54", "302", "2019", "4820", "10398", "58392", "29103", "84920", "938201"] }
+                ]
+            },
+            // Bạn có thể dễ dàng thêm các tỉnh khác vào đây theo cấu trúc tương tự
+        };
 
         function flattenPositions(numbersList) {
             let flatDigits = [];
@@ -46,7 +82,11 @@
             return flatDigits;
         }
 
-        function chaySoiCau() {
+        function chaySoiCauTheoDai() {
+            const select = document.getElementById('provinceSelect');
+            const selectedKey = select.value;
+            const provinceInfo = databaseMienNam[selectedKey] || databaseMienNam["hcm"];
+            
             const loading = document.getElementById('loading');
             const container = document.getElementById('result-container');
             
@@ -56,12 +96,12 @@
             setTimeout(() => {
                 loading.classList.add('hidden');
                 
+                let sampleData = provinceInfo.data;
                 let processedDays = sampleData.map(day => flattenPositions(day.numbers));
                 let numDays = processedDays.length;
                 let totalPositions = processedDays[0].length;
                 let cauDep = [];
 
-                // Thuật toán quét cặp vị trí
                 for (let i = 0; i < totalPositions; i++) {
                     for (let j = i + 1; j < totalPositions; j++) {
                         let bienDo = 0;
@@ -80,11 +120,14 @@
                             }
                         }
 
-                        if (bienDo >= 2) { // Lọc biên độ >= 2
+                        if (bienDo >= 2) {
                             let lastD1 = processedDays[processedDays.length - 1][i];
                             let lastD2 = processedDays[processedDays.length - 1][j];
+                            let targetDate = sampleData[sampleData.length - 1].date;
                             
                             cauDep.push({
+                                provinceName: provinceInfo.name,
+                                targetDate: targetDate,
                                 viTri: `Vị trí [${i}] & [${j}]`,
                                 bienDo: bienDo,
                                 duDoan: `${lastD1}${lastD2} (Lộn: ${lastD2}${lastD1})`
@@ -93,30 +136,33 @@
                     }
                 }
 
-                // Sắp xếp theo biên độ giảm dần
                 cauDep.sort((a, b) => b.bienDo - a.bienDo);
 
                 if (cauDep.length > 0) {
-                    let html = `<h2 class="font-semibold text-slate-700 mb-2">🔥 Top Đường Cầu Đẹp Nhất:</h2>`;
-                    cauDep.slice(0, 5).forEach((item, index) => {
+                    let html = `<div class="mb-3 text-xs font-semibold text-indigo-600 bg-indigo-50 p-2 rounded-lg text-center">Kết quả soi cầu đài: ${provinceInfo.name}</div>`;
+                    
+                    cauDep.slice(0, 5).forEach((item) => {
                         html += `
-                            <div class="bg-slate-50 border border-slate-200 p-4 rounded-xl flex justify-between items-center">
+                            <div class="bg-slate-50 border border-slate-200 p-4 rounded-xl flex justify-between items-center mb-2">
                                 <div>
-                                    <span class="inline-block bg-indigo-100 text-indigo-700 text-xs font-bold px-2 py-1 rounded-md mb-1">${item.viTri}</span>
-                                    <p class="text-lg font-bold text-slate-800">Cặp số: <span class="text-rose-600">${item.duDoan}</span></p>
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="bg-indigo-100 text-indigo-700 text-xs font-bold px-2 py-0.5 rounded">${item.viTri}</span>
+                                        <span class="text-xs text-slate-500">📅 Ngày: ${item.targetDate}</span>
+                                    </div>
+                                    <p class="text-base font-bold text-slate-800">Cặp số: <span class="text-rose-600">${item.duDoan}</span></p>
                                 </div>
                                 <div class="text-right">
                                     <span class="text-xs text-slate-500 block">Biên độ</span>
-                                    <span class="text-lg font-extrabold text-emerald-600">${item.bienDo} ngày</span>
+                                    <span class="text-base font-extrabold text-emerald-600">${item.bienDo} ngày</span>
                                 </div>
                             </div>
                         `;
                     });
                     container.innerHTML = html;
                 } else {
-                    container.innerHTML = `<p class="text-center text-amber-600">Không tìm thấy đường cầu phù hợp trong dữ liệu mẫu.</p>`;
+                    container.innerHTML = `<p class="text-center text-amber-600 text-sm">Không tìm thấy đường cầu phù hợp cho đài ${provinceInfo.name}.</p>`;
                 }
-            }, 400);
+            }, 300);
         }
     </script>
 </body>
