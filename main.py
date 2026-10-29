@@ -3,9 +3,9 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 
-# ==================== CẤU HÌNH TÀI KHOẢN ====================
-TELEGRAM_BOT_TOKEN = "THAY_TOKEN_BOT_CỦA_BẠN_VÀO_ĐÂY"      # Lấy từ @BotFather
-TELEGRAM_CHAT_ID = "THAY_CHAT_ID_CỦA_BẠN_VÀO_ĐÂY"            # Lấy từ @userinfobot hoặc ID nhóm
+# ==================== CẤU HÌNH TÀI KHOẢN CỦA BẠN ====================
+TELEGRAM_BOT_TOKEN = "8998633458:AAGhkWhDPNp-Iy8f96gyACYvSM1DV6NCNpk"
+TELEGRAM_CHAT_ID = "5931570040"
 # ==========================================================
 
 def scrape_real_tiktok_trend_products():
@@ -14,7 +14,7 @@ def scrape_real_tiktok_trend_products():
     """
     print(f"[{datetime.now()}] Đang tiến hành quét và lấy link sản phẩm thực tế...")
     
-    # Bạn có thể thay target_url bằng trang web danh mục sản phẩm bạn muốn cào thực tế
+    # URL danh mục sản phẩm bạn muốn cào thực tế
     target_url = "https://example.com/trending-products" 
     
     headers = {
@@ -34,7 +34,7 @@ def scrape_real_tiktok_trend_products():
                 try:
                     name = item.find('h3', class_='product-title').get_text(strip=True)
                     price = item.find('span', class_='product-price').get_text(strip=True)
-                    link = item.find('a')['href'] # Lấy link thực tế của sản phẩm
+                    link = item.find('a')['href']
                     
                     products_list.append({
                         "name": name,
@@ -47,7 +47,7 @@ def scrape_real_tiktok_trend_products():
     except Exception as e:
         print(f"[-] Lỗi kết nối khi cào web: {e}")
         
-    # Danh sách dự phòng kèm link thực tế mẫu để bot hoạt động ngay không bị trống
+    # Danh sách dự phòng kèm link thực tế mẫu để bot hoạt động ngay
     if not products_list:
         products_list = [
             {
@@ -67,9 +67,6 @@ def scrape_real_tiktok_trend_products():
     return products_list
 
 def generate_tiktok_listing(product):
-    """
-    Tự động tạo form chuẩn SEO và mô tả đăng bán từ thông tin cào được
-    """
     seo_title = f"{product['name']} Form Rộng Cao Cấp Hot Trend 2026"
     
     description = (
@@ -92,9 +89,6 @@ def generate_tiktok_listing(product):
     }
 
 def send_telegram_message(message):
-    """
-    Gửi báo cáo kèm link trực tiếp về Telegram
-    """
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {
         "chat_id": TELEGRAM_CHAT_ID,
