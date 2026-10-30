@@ -3,13 +3,29 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 import urllib.parse
-import random
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import os
 
 # ==================== CẤU HÌNH TÀI KHOẢN CỦA BẠN ====================
 TELEGRAM_BOT_TOKEN = "9032299426:AAHlXiRdw-BFO3gKtJ7ruAUPkWpUEU3QbUM"
 TELEGRAM_CHAT_ID = "5931570040"
 # ==========================================================
 
+# 1. Tạo một HTTP Server ảo để lừa Render (giúp Web Service luôn chạy ổn định ở gói Free)
+class DummyHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"TikTok Bot is running active 24/7!")
+
+def run_web_server():
+    port = int(os.environ.get("PORT", 10000))
+    server = HTTPServer(('0.0.0.0', port), DummyHandler)
+    print(f"[+] Web server ảo đang chạy trên cổng {port}...")
+    server.serve_forever()
+
+# 2. Logic cào dữ liệu và gửi tin nhắn Telegram định kỳ
 def scrape_real_time_trending_products():
     print(f"[{datetime.now()}] Đang tiến hành quét dữ liệu xu hướng thực tế từ internet...")
     
@@ -56,10 +72,10 @@ def generate_tiktok_listing(product):
     description = (
         f"SAN PHAM CAP NHAT REAL-TIME\n\n"
         f"DAC DIEM NOI BAT:\n"
-        f"- Du liệu được quét và phân tích tự động theo thời gian thực.\n"
+        f"- Dữ liệu được quét và phân tích tự động theo thời gian thực.\n"
         f"- Sản phẩm đón đầu xu hướng tìm kiếm cao trên các nền tảng.\n"
         f"- Danh mục: {product['category']}\n\n"
-        f"CHINH SACH HO TRỢ:\n"
+        f"CHÍNH SÁCH HỖ TRỢ:\n"
         f"- Cung cấp sẵn từ khóa và mô tả tối ưu tỷ lệ chuyển đổi.\n"
         f"- Hỗ trợ kiểm tra hàng khi thanh toán.\n\n"
         f"#TikTokShop #RealTimeTrend #XuHuong2026 #{product['category'].replace(' ', '')}"
@@ -88,8 +104,9 @@ def send_telegram_message(message):
     except Exception as e:
         print(f"[-] Lỗi kết nối Telegram: {e}")
 
-def main():
-    print("[+] Bot TikTok tự động đã khởi động và đang chạy ngầm 24/7...")
+def bot_worker_loop():
+    print("[+] Bot TikTok tự động đã khởi động...")
+    time.sleep(5) # Chờ server web khởi động ổn định
     while True:
         try:
             raw_products = scrape_real_time_trending_products()
@@ -112,9 +129,15 @@ def main():
         except Exception as e:
             print(f"[-] Lỗi vòng lặp chính: {e}")
             
-        # Nghỉ 3 giờ (10800 giây) trước khi quét lại đợt tiếp theo
+        # Nghỉ 3 tiếng (10800 giây) trước khi quét lại đợt tiếp theo
         print("[+] Đang chờ lịch quét tiếp theo...")
         time.sleep(10800)
 
 if __name__ == "__main__":
-    main()
+    # Chạy Web Server ở một luồng riêng để làm hài lòng Render (gói Free)
+    server_thread = threading.Thread(target=run_web_server)
+    server_thread.daemon = True
+    server_thread.start()
+    
+    # Chạy vòng lặp bot chính ở luồng mặc định
+    bot_worker_loop()
