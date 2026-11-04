@@ -17,7 +17,7 @@ class DummyHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.end_headers()
-        self.wfile.write(b"CauTuRong Bot is running 24/7 with Station-by-Station Detailed Analysis!")
+        self.wfile.write(b"CauTuRong Bot is running 24/7 cleanly!")
 
 def run_web_server():
     port = int(os.environ.get("PORT", 10000))
@@ -36,13 +36,12 @@ def send_telegram_message(chat_id, message):
     except Exception as e:
         print(f"Lỗi gửi Telegram: {e}")
 
-# HÀM PHÂN TÍCH CHI TIẾT TỪNG ĐÀI ĐỘC LẬP
+# HÀM PHÂN TÍCH TỪNG ĐÀI ĐỘC LẬP
 def generate_station_by_station_report():
-    tomorrow = datetime.now() + timedelta(days=1)
-    tomorrow_str = tomorrow.strftime('%d/%m/%Y')
+    today = datetime.now()
+    today_str = today.strftime('%d/%m/%Y')
     
-    weekday = tomorrow.weekday()
-    # Danh sách các đài theo thứ trong tuần
+    weekday = today.weekday()
     stations_schedule = {
         0: ["TP. Hồ Chí Minh", "Đồng Tháp", "Cà Mau"],
         1: ["Bến Tre", "Vũng Tàu", "Bạc Liêu"],
@@ -55,12 +54,11 @@ def generate_station_by_station_report():
     today_stations = stations_schedule.get(weekday, ["Đài Chính", "Đài Phụ 1", "Đài Phụ 2"])
     
     report_lines = [
-        f"🎯 *BẢN TIN SOI CẦU & THỐNG KÊ CHI TIẾT TỪNG ĐÀI* 🎯",
-        f"📅 Ngày soi cầu: `{tomorrow_str}`\n"
+        f"🎯 *BẢN TIN SOI CẦU & THỐNG KÊ TỪNG ĐÀI* 🎯",
+        f"📅 Ngày: `{today_str}`\n"
         f"━━━━━━━━━━━━━━━━━━━━━━━"
     ]
     
-    # Vòng lặp phân tích riêng biệt cho từng đài trong ngày
     for idx, station_name in enumerate(today_stations, 1):
         bach_thu = random.randint(15, 95)
         lot_dao = f"{bach_thu}"[::-1]
@@ -68,7 +66,6 @@ def generate_station_by_station_report():
         da_2 = random.randint(50, 98)
         cham = random.choice([2, 3, 5, 7, 8, 9])
         
-        # Dữ liệu lô gan và lô về nhiều riêng của từng đài
         gan_1 = random.randint(12, 28)
         gan_2 = random.randint(29, 45)
         ve_nhieu_1 = random.randint(10, 49)
@@ -78,15 +75,14 @@ def generate_station_by_station_report():
             f"📍 *ĐÀI {idx}: {station_name.upper()}*\n"
             f"🔥 Bạch thủ lô: `{bach_thu}` (Lót nhẹ `{lot_dao}`)\n"
             f"⚡ Cặp đá xiên: `[{da_1}] - [{da_2}]`\n"
-            f"🎯 Chạm đề chuẩn: `Chạm {cham}`\n"
-            f"🐢 Lô gan cần lưu ý: `{gan_1}` - `{gan_2}`\n"
-            f"🚀 Lô về nhiều (Nhịp thoáng): `[{ve_nhieu_1}]` - `[{ve_nhieu_2}]`\n"
+            f"🎯 Chạm đề: `Chạm {cham}`\n"
+            f"🐢 Lô gan: `{gan_1}` - `{gan_2}`\n"
+            f"🚀 Lô về nhiều: `[{ve_nhieu_1}]` - `[{ve_nhieu_2}]`\n"
             f"---------------------------------------"
         )
         report_lines.append(station_block)
         
-    report_lines.append(f"📊 *Lời khuyên:* Anh em cân đối nguồn vốn vào tiền hợp lý cho từng đài, ưu tiên đài chính để tối ưu hiệu quả!")
-    
+    report_lines.append(f"📊 *Lời khuyên:* Vào tiền hợp lý, ưu tiên đài chính!")
     return "\n".join(report_lines)
 
 def fetch_realtime_results():
@@ -115,7 +111,7 @@ def fetch_realtime_results():
     return "⚠️ Hiện chưa thể kết nối trực tiếp đến bảng kết quả, bạn vui lòng truy cập minhngoc.net.vn nhé!"
 
 def telegram_listener_loop():
-    print("[+] Bắt đầu chạy luồng lắng nghe lệnh Telegram...")
+    print("[+] Bắt đầu chạy luồng lắng nghe lệnh Telegram sạch...")
     offset = 0
     while True:
         try:
@@ -140,31 +136,6 @@ def telegram_listener_loop():
             print(f"Lỗi lắng nghe lệnh: {e}")
         time.sleep(1)
 
-def scheduled_task_loop():
-    send_telegram_message(TELEGRAM_CHAT_ID, "🚀 *Bot CAUTURONG đã cập nhật bản phân tích từng đài riêng biệt!* Gõ `/xem` để kiểm tra ngay.")
-    last_sent_date = ""
-    
-    while True:
-        try:
-            now = datetime.now()
-            current_date = now.strftime('%Y-%m-%d')
-            current_hour = now.hour
-            current_minute = now.minute
-            
-            if current_hour == 5 and current_minute == 15 and last_sent_date != f"{current_date}_0515":
-                report = generate_station_by_station_report()
-                send_telegram_message(TELEGRAM_CHAT_ID, f"⏰ *Bản tin định kỳ 05:15 sáng*\n\n{report}")
-                last_sent_date = f"{current_date}_0515"
-                
-            elif current_hour == 17 and current_minute == 15 and last_sent_date != f"{current_date}_1715":
-                send_telegram_message(TELEGRAM_CHAT_ID, "⏰ *Bản tin chiều* - Đã đến giờ mở thưởng, gõ `/kq` để xem kết quả cập nhật ngay!")
-                last_sent_date = f"{current_date}_1715"
-                
-        except Exception as e:
-            print(f"Lỗi lịch trình: {e}")
-            
-        time.sleep(30)
-
 if __name__ == "__main__":
     server_thread = threading.Thread(target=run_web_server)
     server_thread.daemon = True
@@ -174,4 +145,6 @@ if __name__ == "__main__":
     listener_thread.daemon = True
     listener_thread.start()
     
-    scheduled_task_loop()
+    # Giữ tiến trình chính chạy
+    while True:
+        time.sleep(60)
