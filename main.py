@@ -12,10 +12,6 @@ TELEGRAM_BOT_TOKEN = "9032299426:AAHlXiRdw-BFO3gKtJ7ruAUPkWpUEU3QbUM"
 TELEGRAM_CHAT_ID = "5931570040"
 BOT_ID = "CAUTURONG BOT"
 
-# Username hoặc ID của kênh bắt buộc phải tham gia
-REQUIRED_CHANNEL = "@A_ToolsX" 
-CHANNEL_LINK = "https://t.me/A_ToolsX"
-
 AUTO_SEND_HOUR = 5
 AUTO_SEND_MINUTE = 30
 AUTO_RESULT_HOUR = 16
@@ -44,22 +40,6 @@ def send_telegram_message(chat_id, message):
         requests.post(url, json=payload)
     except Exception as e:
         print(f"Lỗi gửi Telegram: {e}")
-
-# HÀM KIỂM TRA NGƯỜI DÙNG ĐÃ GIA NHẬP KÊNH CHƯA
-def check_user_membership(user_id):
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getChatMember?chat_id={REQUIRED_CHANNEL}&user_id={user_id}"
-    try:
-        response = requests.get(url, timeout=10)
-        if response.status_code == 200:
-            data = response.json()
-            if data.get("ok"):
-                status = data["result"].get("status")
-                # Các trạng thái hợp lệ thể hiện user đã tham gia kênh
-                if status in ["creator", "administrator", "member"]:
-                    return True
-    except Exception as e:
-        print(f"Lỗi kiểm tra thành viên kênh: {e}")
-    return False
 
 STATIONS_SCHEDULE = {
     0: ["TP. Hồ Chí Minh", "Đồng Tháp", "Cà Mau"],
@@ -217,7 +197,7 @@ def schedule_sender_loop():
         time.sleep(15)
 
 def telegram_listener_loop():
-    print("[+] Lắng nghe lệnh Telegram (có kiểm tra join kênh)...")
+    print("[+] Lắng nghe lệnh Telegram (Đã gỡ bỏ kiểm tra kênh)...")
     offset = 0
     while True:
         try:
@@ -230,17 +210,8 @@ def telegram_listener_loop():
                     if "message" in result and "text" in result["message"]:
                         text = result["message"]["text"].strip().lower()
                         chat_id = result["message"]["chat"]["id"]
-                        user_id = result["message"]["from"]["id"]
                         
-                        # KIỂM TRA THÀNH VIÊN KÊNH
-                        if not check_user_membership(user_id):
-                            send_telegram_message(
-                                chat_id, 
-                                f"🚀 To use this bot, you must join our channel {CHANNEL_LINK}"
-                            )
-                            continue
-                        
-                        # NẾU ĐÃ GIA NHẬP KÊNH -> XỬ LÝ LỆNH BÌNH THƯỜNG
+                        # Xử lý lệnh trực tiếp không cần kiểm tra điều kiện rườm rà
                         if text in ["xem", "/xem", "thong ke", "/thongke", "thống kê", "coi"]:
                             report = generate_station_by_station_report()
                             send_telegram_message(chat_id, report)
