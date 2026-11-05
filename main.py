@@ -66,49 +66,8 @@ def fetch_realtime_raw_data():
         print(f"Lỗi cào dữ liệu thực tế: {e}")
     return [], []
 
-def generate_station_by_station_report():
-    target_date = datetime.now()
-    today_str = target_date.strftime('%d/%m/%Y')
-    weekday = target_date.weekday()
-    today_stations = STATIONS_SCHEDULE.get(weekday, ["Đài Chính", "Đài Phụ 1", "Đài Phụ 2"])
-    
-    stations_scraped, raw_numbers = fetch_realtime_raw_data()
-    
-    report_lines = [
-        f"🎯 *BẢN TIN SOI CẦU THỰC CHIẾN* 🎯",
-        f"📅 Ngày: `{today_str}`\n"
-        f"━━━━━━━━━━━━━━━━━━━━━━━"
-    ]
-    
-    for idx, station_name in enumerate(today_stations, 1):
-        if raw_numbers and len(raw_numbers) > idx * 5:
-            base_seed = int(raw_numbers[idx * 2][-2:])
-            bach_thu = (base_seed * 7 + idx) % 80 + 10
-        else:
-            bach_thu = random.randint(15, 95)
-            
-        lot_dao = f"{bach_thu:02d}"[::-1]
-        da_1 = (bach_thu + 12) % 89 + 10
-        da_2 = (bach_thu * 3) % 89 + 10
-        cham = bach_thu % 10
-        
-        gan_1 = random.randint(12, 28)
-        gan_2 = random.randint(29, 45)
-        
-        station_block = (
-            f"📍 *ĐÀI {idx}: {station_name.upper()}*\n"
-            f"🔥 Bạch thủ lô: `{bach_thu:02d}` (Lót nhẹ `{lot_dao}`)\n"
-            f"⚡ Cặp đá xiên: `[{da_1:02d}] - [{da_2:02d}]`\n"
-            f"🎯 Chạm đề: `Chạm {cham}`\n"
-            f"🐢 Lô gan: `{gan_1}` - `{gan_2}`\n"
-            f"---------------------------------------"
-        )
-        report_lines.append(station_block)
-        
-    report_lines.append(f"📊 *Lời khuyên:* Vào tiền hợp lý, ưu tiên đài chính!")
-    return "\n".join(report_lines)
-
-def generate_three_stations_analysis():
+# HÀM GỘP CHUNG 3 ĐÀI VÀO MỘT BẢN TIN DUY NHẤT
+def generate_combined_report():
     target_date = datetime.now()
     today_str = target_date.strftime('%d/%m/%Y')
     weekday = target_date.weekday()
@@ -116,29 +75,26 @@ def generate_three_stations_analysis():
     
     stations_scraped, raw_numbers = fetch_realtime_raw_data()
     
-    if raw_numbers:
-        bach_thu_chung = int(raw_numbers[0][-2:]) if len(raw_numbers[0]) >= 2 else 45
-    else:
-        bach_thu_chung = 68
-        
-    cap_bach_thu = [f"{bach_thu_chung:02d}", f"{str(bach_thu_chung)[::-1]}"]
-    de_cham_chung = bach_thu_chung % 10
-    xien_3_dai = [
-        (bach_thu_chung + 5) % 90 + 10,
-        (bach_thu_chung + 17) % 90 + 10,
-        (bach_thu_chung + 29) % 90 + 10
-    ]
+    station_names_str = " - ".join(today_stations)
+    
+    # Tạo số liệu tổng hợp chung cho các đài
+    bthu_1 = random.randint(15, 95)
+    bthu_2 = random.randint(15, 95)
+    bthu_3 = random.randint(15, 95)
     
     report = (
-        f"🔗 *PHÂN TÍCH TỔNG HỢP 3 ĐÀI* 🔗\n"
+        f"🎯 *BẢN TIN SOI CẦU MIỀN NAM (3 ĐÀI)* 🎯\n"
         f"📅 Ngày: `{today_str}`\n"
-        f"📍 Các đài: `{' - '.join(today_stations)}`\n"
+        f"📍 Các đài: `{station_names_str}`\n"
         f"━━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"🔥 **Bạch thủ lô chung 3 đài:** `{bach_thu_chung:02d}` (Cặp lót: `{' - '.join(cap_bach_thu)}`)\n"
-        f"⚡ **Bộ xiên 3 đài sáng giá:** `[{xien_3_dai[0]:02d}] - [{xien_3_dai[1]:02d}] - [{xien_3_dai[2]:02d}]`\n"
-        f"🎯 **Chạm đề chung 3 đài:** `Chạm {de_cham_chung}`\n"
-        f"---------------------------------------\n"
-        f"💡 *Lời khuyên:* Phù hợp để đánh dàn hoặc rải đều vốn cho cả 3 đài!"
+        f"🔥 **Bạch thủ lô các đài:**\n"
+        f"• *{today_stations[0]}:* `{bthu_1:02d}` (Lót `{str(bthu_1)[::-1]}`)\n"
+        f"• *{today_stations[1]}:* `{bthu_2:02d}` (Lót `{str(bthu_2)[::-1]}`)\n"
+        f"• *{today_stations[2]}:* `{bthu_3:02d}` (Lót `{str(bthu_3)[::-1]}`)\n\n"
+        f"⚡ **Cặp đá xiên sáng giá:** `[{bthu_1}] - [{bthu_2}] - [{bthu_3}]`\n"
+        f"🎯 **Chạm đề chung:** `Chạm {bthu_1 % 10}` & `Chạm {bthu_2 % 10}`\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"📊 *Lời khuyên:* Vào tiền hợp lý, phân bổ vốn đều cho các đài!"
     )
     return report
 
@@ -175,11 +131,9 @@ def schedule_sender_loop():
         now = datetime.now()
         if now.hour == AUTO_SEND_HOUR and now.minute == AUTO_SEND_MINUTE:
             if not sent_report_today:
-                report_3dai = generate_three_stations_analysis()
-                send_telegram_message(TELEGRAM_CHAT_ID, f"⏰ *BẢN TIN (1/2) - TỔNG HỢP 3 ĐÀI*\n\n" + report_3dai)
-                time.sleep(2)
-                report_chitiet = generate_station_by_station_report()
-                send_telegram_message(TELEGRAM_CHAT_ID, f"⏰ *BẢN TIN (2/2) - CHI TIẾT TỪNG ĐÀI*\n\n" + report_chitiet)
+                # Gửi gộp chung 3 đài thành 1 tin nhắn duy nhất vào lúc 5:30
+                combined_report = generate_combined_report()
+                send_telegram_message(TELEGRAM_CHAT_ID, f"⏰ *BẢN TIN SOI CẦU HẰNG NGÀY*\n\n" + combined_report)
                 sent_report_today = True
                 time.sleep(60)
 
@@ -197,7 +151,7 @@ def schedule_sender_loop():
         time.sleep(15)
 
 def telegram_listener_loop():
-    print("[+] Lắng nghe lệnh Telegram (Đã gỡ bỏ kiểm tra kênh)...")
+    print("[+] Lắng nghe lệnh Telegram...")
     offset = 0
     while True:
         try:
@@ -211,14 +165,10 @@ def telegram_listener_loop():
                         text = result["message"]["text"].strip().lower()
                         chat_id = result["message"]["chat"]["id"]
                         
-                        # Xử lý lệnh trực tiếp không cần kiểm tra điều kiện rườm rà
-                        if text in ["xem", "/xem", "thong ke", "/thongke", "thống kê", "coi"]:
-                            report = generate_station_by_station_report()
+                        # Dù gõ xem hay 3dai đều trả về một bảng gộp chung 3 đài gọn gàng
+                        if text in ["xem", "/xem", "thong ke", "/thongke", "thống kê", "coi", "3dai", "/3dai", "3 đài", "/3 đài", "ba đài", "phan tich 3 dai"]:
+                            report = generate_combined_report()
                             send_telegram_message(chat_id, report)
-                            
-                        elif text in ["3dai", "/3dai", "3 đài", "/3 đài", "ba đài", "phan tich 3 dai"]:
-                            analysis_report = generate_three_stations_analysis()
-                            send_telegram_message(chat_id, analysis_report)
                             
                         elif text in ["kq", "/kq", "ketqua", "/ketqua", "kết quả", "ket qua"]:
                             kq_msg = fetch_realtime_results()
