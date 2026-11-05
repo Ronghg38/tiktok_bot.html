@@ -12,6 +12,10 @@ TELEGRAM_BOT_TOKEN = "9032299426:AAHlXiRdw-BFO3gKtJ7ruAUPkWpUEU3QbUM"
 TELEGRAM_CHAT_ID = "5931570040"
 BOT_ID = "CAUTURONG BOT"
 
+# Username hoặc ID của kênh bắt buộc phải tham gia
+REQUIRED_CHANNEL = "@A_ToolsX" 
+CHANNEL_LINK = "https://t.me/A_ToolsX"
+
 AUTO_SEND_HOUR = 5
 AUTO_SEND_MINUTE = 30
 AUTO_RESULT_HOUR = 16
@@ -41,6 +45,22 @@ def send_telegram_message(chat_id, message):
     except Exception as e:
         print(f"Lỗi gửi Telegram: {e}")
 
+# HÀM KIỂM TRA NGƯỜI DÙNG ĐÃ GIA NHẬP KÊNH CHƯA
+def check_user_membership(user_id):
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getChatMember?chat_id={REQUIRED_CHANNEL}&user_id={user_id}"
+    try:
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("ok"):
+                status = data["result"].get("status")
+                # Các trạng thái hợp lệ thể hiện user đã tham gia kênh
+                if status in ["creator", "administrator", "member"]:
+                    return True
+    except Exception as e:
+        print(f"Lỗi kiểm tra thành viên kênh: {e}")
+    return False
+
 STATIONS_SCHEDULE = {
     0: ["TP. Hồ Chí Minh", "Đồng Tháp", "Cà Mau"],
     1: ["Bến Tre", "Vũng Tàu", "Bạc Liêu"],
@@ -51,7 +71,6 @@ STATIONS_SCHEDULE = {
     6: ["Tiền Giang", "Kiên Giang", "Đà Lạt"]
 }
 
-# HÀM CÀO DỮ LIỆU THỰC TẾ TỪ MINH NGỌC ĐỂ PHÂN TÍCH CẦU
 def fetch_realtime_raw_data():
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
@@ -60,34 +79,28 @@ def fetch_realtime_raw_data():
         if response.status_code == 200:
             soup = BeautifulSoup(response.content, 'html.parser')
             stations = [th.get_text(strip=True) for th in soup.select('.tinh')]
-            
-            # Lấy các dãy số kết quả giải thưởng thực tế làm cơ sở bắt cầu
             all_numbers = [td.get_text(strip=True) for td in soup.select('td.v-giai span, td[id^="giai"]')]
             valid_digits = [num for num in all_numbers if num.isdigit() and len(num) >= 2]
-            
             return stations, valid_digits
     except Exception as e:
         print(f"Lỗi cào dữ liệu thực tế: {e}")
     return [], []
 
-# HÀM SOI CẦU TỪNG ĐÀI DỰA TRÊN KẾT QUẢ THỰC TẾ
 def generate_station_by_station_report():
     target_date = datetime.now()
     today_str = target_date.strftime('%d/%m/%Y')
     weekday = target_date.weekday()
     today_stations = STATIONS_SCHEDULE.get(weekday, ["Đài Chính", "Đài Phụ 1", "Đài Phụ 2"])
     
-    # Cào dữ liệu thực tế để làm mầm phân tích cầu
     stations_scraped, raw_numbers = fetch_realtime_raw_data()
     
     report_lines = [
-        f"🎯 *BẢN TIN SOI CẦU THỰC CHIẾN (DỰA TRÊN KẾT QUẢ THẬT)* 🎯",
+        f"🎯 *BẢN TIN SOI CẦU THỰC CHIẾN* 🎯",
         f"📅 Ngày: `{today_str}`\n"
         f"━━━━━━━━━━━━━━━━━━━━━━━"
     ]
     
     for idx, station_name in enumerate(today_stations, 1):
-        # Dùng dữ liệu thật từ nhà đài nếu cào được để tạo số chuẩn, tránh ngẫu nhiên vô căn cứ
         if raw_numbers and len(raw_numbers) > idx * 5:
             base_seed = int(raw_numbers[idx * 2][-2:])
             bach_thu = (base_seed * 7 + idx) % 80 + 10
@@ -104,7 +117,6 @@ def generate_station_by_station_report():
         
         station_block = (
             f"📍 *ĐÀI {idx}: {station_name.upper()}*\n"
-            f"🔍 *Cơ sở:* Phân tích từ nhịp cầu kỳ quay thực tế\n"
             f"🔥 Bạch thủ lô: `{bach_thu:02d}` (Lót nhẹ `{lot_dao}`)\n"
             f"⚡ Cặp đá xiên: `[{da_1:02d}] - [{da_2:02d}]`\n"
             f"🎯 Chạm đề: `Chạm {cham}`\n"
@@ -113,10 +125,9 @@ def generate_station_by_station_report():
         )
         report_lines.append(station_block)
         
-    report_lines.append(f"📊 *Lời khuyên:* Vào tiền hợp lý dựa trên dữ liệu thực tế nhà đài!")
+    report_lines.append(f"📊 *Lời khuyên:* Vào tiền hợp lý, ưu tiên đài chính!")
     return "\n".join(report_lines)
 
-# HÀM PHÂN TÍCH TỔNG HỢP 3 ĐÀI TỪ DỮ LIỆU THẬT
 def generate_three_stations_analysis():
     target_date = datetime.now()
     today_str = target_date.strftime('%d/%m/%Y')
@@ -139,17 +150,15 @@ def generate_three_stations_analysis():
     ]
     
     report = (
-        f"🔗 *PHÂN TÍCH TỔNG HỢP 3 ĐÀI (DỮ LIỆU THỰC TẾ)* 🔗\n"
+        f"🔗 *PHÂN TÍCH TỔNG HỢP 3 ĐÀI* 🔗\n"
         f"📅 Ngày: `{today_str}`\n"
         f"📍 Các đài: `{' - '.join(today_stations)}`\n"
         f"━━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"📐 **Phương pháp:** Thuật toán quét nhịp lô từ kết quả thực tế\n"
         f"🔥 **Bạch thủ lô chung 3 đài:** `{bach_thu_chung:02d}` (Cặp lót: `{' - '.join(cap_bach_thu)}`)\n"
         f"⚡ **Bộ xiên 3 đài sáng giá:** `[{xien_3_dai[0]:02d}] - [{xien_3_dai[1]:02d}] - [{xien_3_dai[2]:02d}]`\n"
         f"🎯 **Chạm đề chung 3 đài:** `Chạm {de_cham_chung}`\n"
-        f"📈 **Nhận định:** Biên độ cầu chạy bám sát kết quả xổ số mở thưởng gần nhất.\n"
         f"---------------------------------------\n"
-        f"💡 *Lời khuyên:* Theo dõi sát bảng kết quả thực tế để đánh hiệu quả!"
+        f"💡 *Lời khuyên:* Phù hợp để đánh dàn hoặc rải đều vốn cho cả 3 đài!"
     )
     return report
 
@@ -169,8 +178,7 @@ def fetch_realtime_results():
                 f"🏆 *KẾT QUẢ XỔ SỐ MIỀN NAM (THỰC TẾ)* 🏆\n"
                 f"📅 Ngày: `{today_str}`\n"
                 f"📍 Các đài: `{station_str}`\n\n"
-                f"✅ *Dữ liệu đồng bộ trực tiếp từ nhà đài Minh Ngọc.*\n"
-                f"🔗 [Xem chi tiết tại đây](https://www.minhngoc.net.vn/ket-qua-xo-so/mien-nam.html)"
+                f"✅ *Dữ liệu đồng bộ trực tiếp từ nhà đài Minh Ngọc.*"
             )
             return result_msg
     except Exception as e:
@@ -178,40 +186,29 @@ def fetch_realtime_results():
         
     return "⚠️ Hiện chưa thể kết nối trực tiếp đến bảng kết quả, bạn vui lòng truy cập minhngoc.net.vn nhé!"
 
-# ==================== LUỒNG HẸN GIỜ TỰ ĐỘNG ====================
 def schedule_sender_loop():
-    print(f"[+] Đã kích hoạt luồng hẹn giờ tự động:")
-    print(f"    - Soi cầu thực chiến lúc: {AUTO_SEND_HOUR:02d}:{AUTO_SEND_MINUTE:02d}")
-    print(f"    - Kết quả xổ số lúc: {AUTO_RESULT_HOUR:02d}:{AUTO_RESULT_MINUTE:02d}")
-    
+    print(f"[+] Đã kích hoạt luồng hẹn giờ tự động gửi tin...")
     sent_report_today = False
     sent_result_today = False
     
     while True:
         now = datetime.now()
-        
         if now.hour == AUTO_SEND_HOUR and now.minute == AUTO_SEND_MINUTE:
             if not sent_report_today:
-                print("[+] Đang gửi bản tin soi cầu thực chiến lúc 5:30...")
                 report_3dai = generate_three_stations_analysis()
                 send_telegram_message(TELEGRAM_CHAT_ID, f"⏰ *BẢN TIN (1/2) - TỔNG HỢP 3 ĐÀI*\n\n" + report_3dai)
                 time.sleep(2)
-                
                 report_chitiet = generate_station_by_station_report()
                 send_telegram_message(TELEGRAM_CHAT_ID, f"⏰ *BẢN TIN (2/2) - CHI TIẾT TỪNG ĐÀI*\n\n" + report_chitiet)
-                
                 sent_report_today = True
                 time.sleep(60)
 
         elif now.hour == AUTO_RESULT_HOUR and now.minute == AUTO_RESULT_MINUTE:
             if not sent_result_today:
-                print("[+] Đang gửi kết quả xổ số thực tế lúc 16:45...")
                 kq_msg = fetch_realtime_results()
                 send_telegram_message(TELEGRAM_CHAT_ID, f"⏰ *THÔNG BÁO KẾT QUẢ HÔM NAY*\n\n" + kq_msg)
-                
                 sent_result_today = True
                 time.sleep(60)
-                
         else:
             if now.hour == 0 and now.minute == 0:
                 sent_report_today = False
@@ -219,9 +216,8 @@ def schedule_sender_loop():
                 
         time.sleep(15)
 
-# ==================== LUỒNG LẮNG NGHE LỆNH TELEGRAM ====================
 def telegram_listener_loop():
-    print("[+] Lắng nghe lệnh Telegram (hỗ trợ không cần dấu /)...")
+    print("[+] Lắng nghe lệnh Telegram (có kiểm tra join kênh)...")
     offset = 0
     while True:
         try:
@@ -234,7 +230,17 @@ def telegram_listener_loop():
                     if "message" in result and "text" in result["message"]:
                         text = result["message"]["text"].strip().lower()
                         chat_id = result["message"]["chat"]["id"]
+                        user_id = result["message"]["from"]["id"]
                         
+                        # KIỂM TRA THÀNH VIÊN KÊNH
+                        if not check_user_membership(user_id):
+                            send_telegram_message(
+                                chat_id, 
+                                f"🚀 To use this bot, you must join our channel {CHANNEL_LINK}"
+                            )
+                            continue
+                        
+                        # NẾU ĐÃ GIA NHẬP KÊNH -> XỬ LÝ LỆNH BÌNH THƯỜNG
                         if text in ["xem", "/xem", "thong ke", "/thongke", "thống kê", "coi"]:
                             report = generate_station_by_station_report()
                             send_telegram_message(chat_id, report)
