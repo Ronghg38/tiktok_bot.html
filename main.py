@@ -33,7 +33,7 @@ def send_telegram_message(chat_id, message):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {
         "chat_id": chat_id,
-        "text": f"@{BOT_ID}\n{message}",
+    "text": f"@{BOT_ID}\n{message}",
         "parse_mode": "Markdown"
     }
     try:
@@ -41,7 +41,8 @@ def send_telegram_message(chat_id, message):
     except Exception as e:
         print(f"Lỗi gửi Telegram: {e}")
 
-STATIONS_SCHEDULE = {
+# Lịch các đài Miền Nam
+STATIONS_MN = {
     0: ["TP. Hồ Chí Minh", "Đồng Tháp", "Cà Mau"],
     1: ["Bến Tre", "Vũng Tàu", "Bạc Liêu"],
     2: ["Đồng Nai", "Cần Thơ", "Sóc Trăng"],
@@ -51,10 +52,21 @@ STATIONS_SCHEDULE = {
     6: ["Tiền Giang", "Kiên Giang", "Đà Lạt"]
 }
 
-def fetch_realtime_raw_data():
+# Lịch các đài Miền Trung (mẫu lấy 2 đài chính trong ngày)
+STATIONS_MT = {
+    0: ["Thừa Thiên Huế", "Phú Yên"],
+    1: ["Quảng Nam", "Đắk Lắk"],
+    2: ["Đà Nẵng", "Khánh Hòa"],
+    3: ["Bình Định", "Quảng Trị", "Quảng Bình"],
+    4: ["Quảng Ngãi", "Đắk Nông", "Gia Lai"],
+    5: ["Ninh Thuận", "Đà Nẵng", "Đắk Nông"],
+    6: ["Khánh Hòa", "Kon Tum", "Thừa Thiên Huế"]
+}
+
+def fetch_realtime_raw_data(region="mien-nam"):
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-        url = "https://www.minhngoc.net.vn/ket-qua-xo-so/mien-nam.html"
+        url = f"https://www.minhngoc.net.vn/ket-qua-xo-so/{region}.html"
         response = requests.get(url, headers=headers, timeout=10)
         if response.status_code == 200:
             soup = BeautifulSoup(response.content, 'html.parser')
@@ -63,76 +75,102 @@ def fetch_realtime_raw_data():
             valid_digits = [num for num in all_numbers if num.isdigit() and len(num) >= 2]
             return stations, valid_digits
     except Exception as e:
-        print(f"Lỗi cào dữ liệu thực tế: {e}")
+        print(f"Lỗi cào dữ liệu {region}: {e}")
     return [], []
 
-def generate_master_report():
+# HÀM TẠO BẢN TIN MIỀN NAM
+def generate_mn_report():
     target_date = datetime.now()
     today_str = target_date.strftime('%d/%m/%Y')
     weekday = target_date.weekday()
-    today_stations = STATIONS_SCHEDULE.get(weekday, ["Đài 1", "Đài 2", "Đài 3"])[:3]
+    today_stations = STATIONS_MN.get(weekday, ["Đài 1", "Đài 2", "Đài 3"])[:3]
     
-    _, raw_numbers = fetch_realtime_raw_data()
+    _, raw_numbers = fetch_realtime_raw_data("mien-nam")
     station_names_str = " - ".join(today_stations)
-    
     seed_val = int(raw_numbers[0][-2:]) if (raw_numbers and len(raw_numbers[0]) >= 2) else 45
     
-    # Tính toán số cho phần 3 đài (BTL, STL, Xiên)
-    btl_3dai = (seed_val + 7) % 80 + 10
-    stl_3dai_1 = (seed_val * 2 + 3) % 80 + 10
-    stl_3dai_2 = (seed_val + 15) % 80 + 10
-    xien_1 = (seed_val + 5) % 89 + 10
-    xien_2 = (seed_val + 22) % 89 + 10
-    xien_3 = (seed_val + 37) % 89 + 10
+    btl = (seed_val + 7) % 80 + 10
+    stl_1 = (seed_val * 2 + 3) % 80 + 10
+    stl_2 = (seed_val + 15) % 80 + 10
+    x_1 = (seed_val + 5) % 89 + 10
+    x_2 = (seed_val + 22) % 89 + 10
+    x_3 = (seed_val + 37) % 89 + 10
     
     part_3dai = (
-        f"🔗 *PHẦN 1: TỔNG HỢP 3 ĐÀI MIỀN NAM* 🔗\n"
+        f"🏆 *SOI CẦU MIỀN NAM (3 ĐÀI)* 🏆\n"
         f"📅 Ngày: `{today_str}` | Các đài: `{station_names_str}`\n"
         f"━━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"🔥 **Bạch Thủ Lô (BTL):** `{btl_3dai:02d}` (Lót `{str(btl_3dai)[::-1]}`)\n"
-        f"⚡ **Song Thủ Lô (STL):** `[{stl_3dai_1:02d}] - [{stl_3dai_2:02d}]`\n"
-        f"🎯 **Cặp Xiên 3 Đài:** `[{xien_1:02d}] - [{xien_2:02d}] - [{xien_3:02d}]`\n"
-        f"📌 **Chạm đề chung:** `Chạm {btl_3dai % 10}`"
+        f"🔥 **BTL:** `{btl:02d}` (Lót `{str(btl)[::-1]}`)\n"
+        f"⚡ **STL:** `[{stl_1:02d}] - [{stl_2:02d}]`\n"
+        f"🎯 **Cặp Xiên:** `[{x_1:02d}] - [{x_2:02d}] - [{x_3:02d}]`\n"
+        f"📌 **Chạm đề:** `Chạm {btl % 10}`"
     )
     
-    part_chitiet_lines = [
-        f"\n📌 *PHẦN 2: CHI TIẾT SỐ LIỆU TỪNG ĐÀI* 📌\n"
-        f"━━━━━━━━━━━━━━━━━━━━━━━"
-    ]
-    
-    for idx, station_name in enumerate(today_stations, 1):
-        if raw_numbers and len(raw_numbers) > idx * 4:
-            local_seed = int(raw_numbers[idx * 3][-2:])
-            bach_thu = (local_seed * 5 + idx * 3) % 80 + 10
-        else:
-            bach_thu = (seed_val + idx * 11) % 80 + 10
-            
-        lot_dao = f"{bach_thu:02d}"[::-1]
-        da_1 = (bach_thu + 12) % 89 + 10
-        da_2 = (bach_thu * 3) % 89 + 10
-        cham = bach_thu % 10
-        gan_1 = (bach_thu + 5) % 30 + 10
-        gan_2 = (bach_thu + 17) % 35 + 25
+    part_chitiet = [f"\n📌 *CHI TIẾT TỪNG ĐÀI MIỀN NAM*:\n━━━━━━━━━━━━━━━━━━━━━━━"]
+    for idx, s_name in enumerate(today_stations, 1):
+        bach_thu = (seed_val + idx * 11) % 80 + 10
+        part_chitiet.append(f"📍 *{s_name.upper()}* ➔ BTL: `{bach_thu:02d}` | Chạm: `Chạm {bach_thu % 10}`")
         
-        station_block = (
-            f"📍 *ĐÀI {idx}: {station_name.upper()}*\n"
-            f"🔥 BTL: `{bach_thu:02d}` (Lót `{lot_dao}`)\n"
-            f"⚡ Đá xiên: `[{da_1:02d}] - [{da_2:02d}]` | Chạm: `Chạm {cham}`\n"
-            f"🐢 Lô gan: `{gan_1}` - `{gan_2}`\n"
-            f"---------------------------------------"
-        )
-        part_chitiet_lines.append(station_block)
-        
-    part_chitiet_lines.append(f"📊 *Lời khuyên:* Vào tiền hợp lý, phân bổ vốn đều tay!")
-    
-    master_report = part_3dai + "\n" + "\n".join(part_chitiet_lines)
-    return master_report
+    return part_3dai + "\n" + "\n".join(part_chitiet)
 
-def fetch_realtime_results():
+# HÀM TẠO BẢN TIN MIỀN TRUNG
+def generate_mt_report():
+    target_date = datetime.now()
+    today_str = target_date.strftime('%d/%m/%Y')
+    weekday = target_date.weekday()
+    today_stations = STATIONS_MT.get(weekday, ["Đài Miền Trung 1", "Đài Miền Trung 2"])
+    
+    _, raw_numbers = fetch_realtime_raw_data("mien-trung")
+    station_names_str = " - ".join(today_stations)
+    seed_val = int(raw_numbers[0][-2:]) if (raw_numbers and len(raw_numbers[0]) >= 2) else 38
+    
+    btl = (seed_val + 9) % 80 + 10
+    stl_1 = (seed_val * 3 + 1) % 80 + 10
+    stl_2 = (seed_val + 12) % 80 + 10
+    x_1 = (seed_val + 4) % 89 + 10
+    x_2 = (seed_val + 18) % 89 + 10
+    
+    part_mt = (
+        f"🏆 *SOI CẦU MIỀN TRUNG* 🏆\n"
+        f"📅 Ngày: `{today_str}` | Các đài: `{station_names_str}`\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"🔥 **BTL:** `{btl:02d}` (Lót `{str(btl)[::-1]}`)\n"
+        f"⚡ **STL:** `[{stl_1:02d}] - [{stl_2:02d}]`\n"
+        f"🎯 **Cặp Xiên:** `[{x_1:02d}] - [{x_2:02d}]`\n"
+        f"📌 **Chạm đề:** `Chạm {btl % 10}`"
+    )
+    return part_mt
+
+# HÀM TẠO BẢN TIN MIỀN BẮC
+def generate_mb_report():
+    target_date = datetime.now()
+    today_str = target_date.strftime('%d/%m/%Y')
+    
+    _, raw_numbers = fetch_realtime_raw_data("mien-bac")
+    seed_val = int(raw_numbers[0][-2:]) if (raw_numbers and len(raw_numbers[0]) >= 2) else 79
+    
+    btl = (seed_val + 3) % 80 + 10
+    stl_1 = (seed_val + 11) % 80 + 10
+    stl_2 = (seed_val + 24) % 80 + 10
+    xiên_2 = (seed_val + 8) % 89 + 10
+    xiên_3 = (seed_val + 33) % 89 + 10
+    
+    part_mb = (
+        f"🏆 *SOI CẦU MIỀN BẮC (ĐẶC BIỆT)* 🏆\n"
+        f"📅 Ngày: `{today_str}` | Đài: `Hà Nội (Miền Bắc)`\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"🔥 **Bạch Thủ Lô (BTL):** `{btl:02d}` (Lót `{str(btl)[::-1]}`)\n"
+        f"⚡ **Song Thủ Lô (STL):** `[{stl_1:02d}] - [{stl_2:02d}]`\n"
+        f"🎯 **Xiên Quay / Xiên 2:** `[{xiên_2:02d}] - [{xiên_3:02d}]`\n"
+        f"📌 **Đề Đầu Đuôi / Chạm:** `Chạm {btl % 10}`"
+    )
+    return part_mb
+
+def fetch_realtime_results(region_url, title):
     today_str = datetime.now().strftime('%d/%m/%Y')
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-        url = "https://www.minhngoc.net.vn/ket-qua-xo-so/mien-nam.html"
+        url = f"https://www.minhngoc.net.vn/ket-qua-xo-so/{region_url}.html"
         response = requests.get(url, headers=headers, timeout=10)
         
         if response.status_code == 200:
@@ -141,46 +179,34 @@ def fetch_realtime_results():
             station_str = " - ".join(stations[:3]) if stations else "Hôm nay"
             
             result_msg = (
-                f"🏆 *KẾT QUẢ XỔ SỐ MIỀN NAM (THỰC TẾ)* 🏆\n"
+                f"🏆 *KẾT QUẢ {title.upper()} (THỰC TẾ)* 🏆\n"
                 f"📅 Ngày: `{today_str}`\n"
                 f"📍 Các đài: `{station_str}`\n\n"
-                f"✅ *Dữ liệu đồng bộ trực tiếp từ nhà đài Minh Ngọc.*"
+                f"✅ *Đồng bộ trực tiếp từ Minh Ngọc.*"
             )
             return result_msg
     except Exception as e:
-        print(f"Lỗi lấy kết quả thực tế: {e}")
-        
-    return "⚠️ Hiện chưa thể kết nối trực tiếp đến bảng kết quả, bạn vui lòng truy cập minhngoc.net.vn nhé!"
+        print(f"Lỗi lấy kết quả: {e}")
+    return f"⚠️ Hiện chưa kết nối được kết quả {title}."
 
 def schedule_sender_loop():
-    print(f"[+] Đã kích hoạt luồng hẹn giờ tự động gửi tin...")
+    print(f"[+] Kích hoạt hẹn giờ tự động...")
     sent_report_today = False
-    sent_result_today = False
-    
     while True:
         now = datetime.now()
         if now.hour == AUTO_SEND_HOUR and now.minute == AUTO_SEND_MINUTE:
             if not sent_report_today:
-                full_report = generate_master_report()
-                send_telegram_message(TELEGRAM_CHAT_ID, f"⏰ *BẢN TIN SOI CẦU HẰNG NGÀY*\n\n" + full_report)
+                full_report = generate_mn_report()
+                send_telegram_message(TELEGRAM_CHAT_ID, f"⏰ *BẢN TIN SOI CẦU MIỀN NAM*\n\n" + full_report)
                 sent_report_today = True
-                time.sleep(60)
-
-        elif now.hour == AUTO_RESULT_HOUR and now.minute == AUTO_RESULT_MINUTE:
-            if not sent_result_today:
-                kq_msg = fetch_realtime_results()
-                send_telegram_message(TELEGRAM_CHAT_ID, f"⏰ *THÔNG BÁO KẾT QUẢ HÔM NAY*\n\n" + kq_msg)
-                sent_result_today = True
                 time.sleep(60)
         else:
             if now.hour == 0 and now.minute == 0:
                 sent_report_today = False
-                sent_result_today = False
-                
         time.sleep(15)
 
 def telegram_listener_loop():
-    print("[+] Lắng nghe lệnh Telegram...")
+    print("[+] Lắng nghe lệnh Telegram cho 3 Miền...")
     offset = 0
     while True:
         try:
@@ -194,13 +220,25 @@ def telegram_listener_loop():
                         text = result["message"]["text"].strip().lower()
                         chat_id = result["message"]["chat"]["id"]
                         
-                        if text in ["xem", "/xem", "thong ke", "/thongke", "thống kê", "coi", "3dai", "/3dai", "3 đài", "/3 đài", "ba đài", "phan tich 3 dai"]:
-                            full_report = generate_master_report()
-                            send_telegram_message(chat_id, f"🎯 *BẢN TIN SOI CẦU MIỀN NAM*\n\n" + full_report)
+                        # Lệnh Miền Nam
+                        if text in ["xem", "mn", "mien nam", "3dai"]:
+                            report = generate_mn_report()
+                            send_telegram_message(chat_id, report)
                             
-                        elif text in ["kq", "/kq", "ketqua", "/ketqua", "kết quả", "ket qua"]:
-                            kq_msg = fetch_realtime_results()
-                            send_telegram_message(chat_id, kq_msg)
+                        # Lệnh Miền Trung
+                        elif text in ["mt", "mien trung"]:
+                            report = generate_mt_report()
+                            send_telegram_message(chat_id, report)
+                            
+                        # Lệnh Miền Bắc
+                        elif text in ["mb", "mien bac"]:
+                            report = generate_mb_report()
+                            send_telegram_message(chat_id, report)
+                            
+                        # Lệnh kết quả
+                        elif text in ["kq", "ketqua", "kết quả"]:
+                            kq_mn = fetch_realtime_results("mien-nam", "Miền Nam")
+                            send_telegram_message(chat_id, kq_mn)
         except Exception as e:
             print(f"Lỗi lắng nghe lệnh: {e}")
         time.sleep(1)
