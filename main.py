@@ -33,7 +33,7 @@ def send_telegram_message(chat_id, message):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {
         "chat_id": chat_id,
-    "text": f"@{BOT_ID}\n{message}",
+        "text": f"@{BOT_ID}\n{message}",
         "parse_mode": "Markdown"
     }
     try:
@@ -41,7 +41,6 @@ def send_telegram_message(chat_id, message):
     except Exception as e:
         print(f"Lỗi gửi Telegram: {e}")
 
-# Lịch các đài Miền Nam
 STATIONS_MN = {
     0: ["TP. Hồ Chí Minh", "Đồng Tháp", "Cà Mau"],
     1: ["Bến Tre", "Vũng Tàu", "Bạc Liêu"],
@@ -52,7 +51,6 @@ STATIONS_MN = {
     6: ["Tiền Giang", "Kiên Giang", "Đà Lạt"]
 }
 
-# Lịch các đài Miền Trung (mẫu lấy 2 đài chính trong ngày)
 STATIONS_MT = {
     0: ["Thừa Thiên Huế", "Phú Yên"],
     1: ["Quảng Nam", "Đắk Lắk"],
@@ -78,7 +76,6 @@ def fetch_realtime_raw_data(region="mien-nam"):
         print(f"Lỗi cào dữ liệu {region}: {e}")
     return [], []
 
-# HÀM TẠO BẢN TIN MIỀN NAM
 def generate_mn_report():
     target_date = datetime.now()
     today_str = target_date.strftime('%d/%m/%Y')
@@ -113,7 +110,6 @@ def generate_mn_report():
         
     return part_3dai + "\n" + "\n".join(part_chitiet)
 
-# HÀM TẠO BẢN TIN MIỀN TRUNG
 def generate_mt_report():
     target_date = datetime.now()
     today_str = target_date.strftime('%d/%m/%Y')
@@ -141,7 +137,6 @@ def generate_mt_report():
     )
     return part_mt
 
-# HÀM TẠO BẢN TIN MIỀN BẮC
 def generate_mb_report():
     target_date = datetime.now()
     today_str = target_date.strftime('%d/%m/%Y')
@@ -156,13 +151,13 @@ def generate_mb_report():
     xiên_3 = (seed_val + 33) % 89 + 10
     
     part_mb = (
-        f"🏆 *SOI CẦU MIỀN BẮC (ĐẶC BIỆT)* 🏆\n"
+        f"🏆 *SOI CẦU MIỀN BẮC* 🏆\n"
         f"📅 Ngày: `{today_str}` | Đài: `Hà Nội (Miền Bắc)`\n"
         f"━━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"🔥 **Bạch Thủ Lô (BTL):** `{btl:02d}` (Lót `{str(btl)[::-1]}`)\n"
-        f"⚡ **Song Thủ Lô (STL):** `[{stl_1:02d}] - [{stl_2:02d}]`\n"
-        f"🎯 **Xiên Quay / Xiên 2:** `[{xiên_2:02d}] - [{xiên_3:02d}]`\n"
-        f"📌 **Đề Đầu Đuôi / Chạm:** `Chạm {btl % 10}`"
+        f"🔥 **BTL:** `{btl:02d}` (Lót `{str(btl)[::-1]}`)\n"
+        f"⚡ **STL:** `[{stl_1:02d}] - [{stl_2:02d}]`\n"
+        f"🎯 **Xiên 2 / Xiên 3:** `[{xiên_2:02d}] - [{xiên_3:02d}]`\n"
+        f"📌 **Chạm đề:** `Chạm {btl % 10}`"
     )
     return part_mb
 
@@ -206,7 +201,7 @@ def schedule_sender_loop():
         time.sleep(15)
 
 def telegram_listener_loop():
-    print("[+] Lắng nghe lệnh Telegram cho 3 Miền...")
+    print("[+] Lắng nghe lệnh Telegram sạch (Không có kiểm tra kênh)...")
     offset = 0
     while True:
         try:
@@ -220,22 +215,18 @@ def telegram_listener_loop():
                         text = result["message"]["text"].strip().lower()
                         chat_id = result["message"]["chat"]["id"]
                         
-                        # Lệnh Miền Nam
                         if text in ["xem", "mn", "mien nam", "3dai"]:
                             report = generate_mn_report()
                             send_telegram_message(chat_id, report)
                             
-                        # Lệnh Miền Trung
                         elif text in ["mt", "mien trung"]:
                             report = generate_mt_report()
                             send_telegram_message(chat_id, report)
                             
-                        # Lệnh Miền Bắc
                         elif text in ["mb", "mien bac"]:
                             report = generate_mb_report()
                             send_telegram_message(chat_id, report)
                             
-                        # Lệnh kết quả
                         elif text in ["kq", "ketqua", "kết quả"]:
                             kq_mn = fetch_realtime_results("mien-nam", "Miền Nam")
                             send_telegram_message(chat_id, kq_mn)
