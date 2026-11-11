@@ -1,6 +1,6 @@
 import time
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import os
@@ -41,6 +41,13 @@ def send_telegram_message(chat_id, message):
     except Exception as e:
         print(f"Lỗi gửi Telegram: {e}")
 
+# LẤY THỜI GIAN CHUẨN VIỆT NAM (GMT+7)
+def get_vietnam_time():
+    utc_now = datetime.now(timezone.utc)
+    vn_time = utc_now + timedelta(hours=7)
+    return vn_time
+
+# LỊCH ĐÀI MIỀN NAM (Thứ 2 đến Chủ Nhật: 0 -> 6)
 STATIONS_MN = {
     0: ["TP. Hồ Chí Minh", "Đồng Tháp", "Cà Mau"],
     1: ["Bến Tre", "Vũng Tàu", "Bạc Liêu"],
@@ -51,6 +58,7 @@ STATIONS_MN = {
     6: ["Tiền Giang", "Kiên Giang", "Đà Lạt"]
 }
 
+# LỊCH ĐÀI MIỀN TRUNG (Thứ 2 đến Chủ Nhật: 0 -> 6)
 STATIONS_MT = {
     0: ["Thừa Thiên Huế", "Phú Yên"],
     1: ["Quảng Nam", "Đắk Lắk"],
@@ -68,21 +76,21 @@ def fetch_realtime_raw_data(region="mien-nam"):
         response = requests.get(url, headers=headers, timeout=10)
         if response.status_code == 200:
             soup = BeautifulSoup(response.content, 'html.parser')
-            stations = [th.get_text(strip=True) for th in soup.select('.tinh')]
             all_numbers = [td.get_text(strip=True) for td in soup.select('td.v-giai span, td[id^="giai"]')]
             valid_digits = [num for num in all_numbers if num.isdigit() and len(num) >= 2]
-            return stations, valid_digits
+            return valid_digits
     except Exception as e:
         print(f"Lỗi cào dữ liệu {region}: {e}")
-    return [], []
+    return []
 
 # 1. SOI CẦU MIỀN NAM
 def generate_mn_report():
-    today_str = datetime.now().strftime('%d/%m/%Y')
-    weekday = datetime.now().weekday()
+    vn_now = get_vietnam_time()
+    today_str = vn_now.strftime('%d/%m/%Y')
+    weekday = vn_now.weekday()
     today_stations = STATIONS_MN.get(weekday, ["Đài 1", "Đài 2", "Đài 3"])[:3]
     
-    _, raw_numbers = fetch_realtime_raw_data("mien-nam")
+    raw_numbers = fetch_realtime_raw_data("mien-nam")
     station_names_str = " - ".join(today_stations)
     seed_val = int(raw_numbers[0][-2:]) if (raw_numbers and len(raw_numbers[0]) >= 2) else 45
     
@@ -127,11 +135,12 @@ def generate_mn_report():
 
 # 2. SOI CẦU MIỀN TRUNG
 def generate_mt_report():
-    today_str = datetime.now().strftime('%d/%m/%Y')
-    weekday = datetime.now().weekday()
+    vn_now = get_vietnam_time()
+    today_str = vn_now.strftime('%d/%m/%Y')
+    weekday = vn_now.weekday()
     today_stations = STATIONS_MT.get(weekday, ["Đài Miền Trung 1", "Đài Miền Trung 2"])
     
-    _, raw_numbers = fetch_realtime_raw_data("mien-trung")
+    raw_numbers = fetch_realtime_raw_data("mien-trung")
     station_names_str = " - ".join(today_stations)
     seed_val = int(raw_numbers[0][-2:]) if (raw_numbers and len(raw_numbers[0]) >= 2) else 38
     
@@ -175,9 +184,10 @@ def generate_mt_report():
 
 # 3. SOI CẦU MIỀN BẮC
 def generate_mb_report():
-    today_str = datetime.now().strftime('%d/%m/%Y')
+    vn_now = get_vietnam_time()
+    today_str = vn_now.strftime('%d/%m/%Y')
     
-    _, raw_numbers = fetch_realtime_raw_data("mien-bac")
+    raw_numbers = fetch_realtime_raw_data("mien-bac")
     seed_val = int(raw_numbers[0][-2:]) if (raw_numbers and len(raw_numbers[0]) >= 2) else 79
     
     btl = (seed_val + 3) % 80 + 10
@@ -203,7 +213,8 @@ def generate_mb_report():
     return part_mb
 
 def fetch_realtime_results(region_url, title):
-    today_str = datetime.now().strftime('%d/%m/%Y')
+    vn_now = get_vietnam_time()
+    today_str = vn_now.strftime('%d/%m/%Y')
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
         url = f"https://www.minhngoc.net.vn/ket-qua-xo-so/{region_url}.html"
@@ -229,15 +240,15 @@ def schedule_sender_loop():
     print(f"[+] Kích hoạt hẹn giờ tự động...")
     sent_report_today = False
     while True:
-        now = datetime.now()
-        if now.hour == AUTO_SEND_HOUR and now.minute == AUTO_SEND_MINUTE:
+        vn_now = get_vietnam_time()
+        if vn_now.hour == AUTO_SEND_HOUR and vn_now.minute == AUTO_SEND_MINUTE:
             if not sent_report_today:
                 full_report = generate_mn_report()
                 send_telegram_message(TELEGRAM_CHAT_ID, f"⏰ *Bản Tin Soi Cầu Miền Nam*\n\n" + full_report)
                 sent_report_today = True
                 time.sleep(60)
         else:
-            if now.hour == 0 and now.minute == 0:
+            if vn_now.hour == 0 and vn_now.minute == 0:
                 sent_report_today = False
         time.sleep(15)
 
@@ -253,12 +264,10 @@ def telegram_listener_loop():
                 for result in data.get("result", []):
                     offset = result["update_id"] + 1
                     if "message" in result and "text" in result["message"]:
-                        # Giữ nguyên chuỗi gốc để check các dạng viết hoa/thường (Xem, Mn, Mt, Mb,...)
                         raw_text = result["message"]["text"].strip()
                         text_lower = raw_text.lower()
                         chat_id = result["message"]["chat"]["id"]
                         
-                        # Hỗ trợ cả chữ thường, viết hoa chữ đầu (Xem, Mn, Mt, Mb) và các lệnh tắt
                         if text_lower in ["xem", "mn", "mien nam", "3dai", "/xem", "/mn"] or raw_text in ["Xem", "Mn"]:
                             report = generate_mn_report()
                             send_telegram_message(chat_id, report)
