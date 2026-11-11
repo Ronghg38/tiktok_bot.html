@@ -76,6 +76,7 @@ def fetch_realtime_raw_data(region="mien-nam"):
         print(f"Lỗi cào dữ liệu {region}: {e}")
     return [], []
 
+# HÀM TẠO BẢN TIN MIỀN NAM CHUẨN XÁC NGÀY + ĐẦY ĐỦ CHI TIẾT TỪNG ĐÀI
 def generate_mn_report():
     target_date = datetime.now()
     today_str = target_date.strftime('%d/%m/%Y')
@@ -100,14 +101,29 @@ def generate_mn_report():
         f"🔥 **BTL:** `{btl:02d}` (Lót `{str(btl)[::-1]}`)\n"
         f"⚡ **STL:** `[{stl_1:02d}] - [{stl_2:02d}]`\n"
         f"🎯 **Cặp Xiên:** `[{x_1:02d}] - [{x_2:02d}] - [{x_3:02d}]`\n"
-        f"📌 **Chạm đề:** `Chạm {btl % 10}`"
+        f"📌 **Chạm đề chung:** `Chạm {btl % 10}`"
     )
     
     part_chitiet = [f"\n📌 *CHI TIẾT TỪNG ĐÀI MIỀN NAM*:\n━━━━━━━━━━━━━━━━━━━━━━━"]
     for idx, s_name in enumerate(today_stations, 1):
         bach_thu = (seed_val + idx * 11) % 80 + 10
-        part_chitiet.append(f"📍 *{s_name.upper()}* ➔ BTL: `{bach_thu:02d}` | Chạm: `Chạm {bach_thu % 10}`")
+        lot_dao = f"{bach_thu:02d}"[::-1]
+        da_1 = (bach_thu + 12) % 89 + 10
+        da_2 = (bach_thu * 3) % 89 + 10
+        cham = bach_thu % 10
+        gan_1 = (bach_thu + 5) % 30 + 10
+        gan_2 = (bach_thu + 17) % 35 + 25
         
+        station_block = (
+            f"📍 *ĐÀI {idx}: {s_name.upper()}*\n"
+            f"🔥 BTL: `{bach_thu:02d}` (Lót `{lot_dao}`)\n"
+            f"⚡ Đá xiên: `[{da_1:02d}] - [{da_2:02d}]` | Chạm: `Chạm {cham}`\n"
+            f"🐢 Lô gan: `{gan_1}` - `{gan_2}`\n"
+            f"---------------------------------------"
+        )
+        part_chitiet.append(station_block)
+        
+    part_chitiet.append(f"📊 *Lời khuyên:* Vào tiền hợp lý, phân bổ vốn đều tay!")
     return part_3dai + "\n" + "\n".join(part_chitiet)
 
 def generate_mt_report():
@@ -201,7 +217,7 @@ def schedule_sender_loop():
         time.sleep(15)
 
 def telegram_listener_loop():
-    print("[+] Lắng nghe lệnh Telegram sạch (Không có kiểm tra kênh)...")
+    print("[+] Lắng nghe lệnh Telegram sạch...")
     offset = 0
     while True:
         try:
