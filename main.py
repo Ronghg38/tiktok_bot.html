@@ -76,11 +76,10 @@ def fetch_realtime_raw_data(region="mien-nam"):
         print(f"Lỗi cào dữ liệu {region}: {e}")
     return [], []
 
-# HÀM TẠO BẢN TIN MIỀN NAM CHUẨN XÁC NGÀY + ĐẦY ĐỦ CHI TIẾT TỪNG ĐÀI
+# 1. SOI CẦU MIỀN NAM
 def generate_mn_report():
-    target_date = datetime.now()
-    today_str = target_date.strftime('%d/%m/%Y')
-    weekday = target_date.weekday()
+    today_str = datetime.now().strftime('%d/%m/%Y')
+    weekday = datetime.now().weekday()
     today_stations = STATIONS_MN.get(weekday, ["Đài 1", "Đài 2", "Đài 3"])[:3]
     
     _, raw_numbers = fetch_realtime_raw_data("mien-nam")
@@ -95,16 +94,16 @@ def generate_mn_report():
     x_3 = (seed_val + 37) % 89 + 10
     
     part_3dai = (
-        f"🏆 *SOI CẦU MIỀN NAM (3 ĐÀI)* 🏆\n"
+        f"🏆 *Soi Cầu Miền Nam (3 Đài)* 🏆\n"
         f"📅 Ngày: `{today_str}` | Các đài: `{station_names_str}`\n"
         f"━━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"🔥 **BTL:** `{btl:02d}` (Lót `{str(btl)[::-1]}`)\n"
-        f"⚡ **STL:** `[{stl_1:02d}] - [{stl_2:02d}]`\n"
+        f"🔥 **Bạch Thủ Lô (BTL):** `{btl:02d}` (Lót `{str(btl)[::-1]}`)\n"
+        f"⚡ **Song Thủ Lô (STL):** `[{stl_1:02d}] - [{stl_2:02d}]`\n"
         f"🎯 **Cặp Xiên:** `[{x_1:02d}] - [{x_2:02d}] - [{x_3:02d}]`\n"
-        f"📌 **Chạm đề chung:** `Chạm {btl % 10}`"
+        f"📌 **Chạm Đề Chung:** `Chạm {btl % 10}`"
     )
     
-    part_chitiet = [f"\n📌 *CHI TIẾT TỪNG ĐÀI MIỀN NAM*:\n━━━━━━━━━━━━━━━━━━━━━━━"]
+    part_chitiet = [f"\n📌 *Chi Tiết Từng Đài Miền Nam*:\n━━━━━━━━━━━━━━━━━━━━━━━"]
     for idx, s_name in enumerate(today_stations, 1):
         bach_thu = (seed_val + idx * 11) % 80 + 10
         lot_dao = f"{bach_thu:02d}"[::-1]
@@ -115,21 +114,21 @@ def generate_mn_report():
         gan_2 = (bach_thu + 17) % 35 + 25
         
         station_block = (
-            f"📍 *ĐÀI {idx}: {s_name.upper()}*\n"
+            f"📍 *Đài {idx}: {s_name.upper()}*\n"
             f"🔥 BTL: `{bach_thu:02d}` (Lót `{lot_dao}`)\n"
-            f"⚡ Đá xiên: `[{da_1:02d}] - [{da_2:02d}]` | Chạm: `Chạm {cham}`\n"
-            f"🐢 Lô gan: `{gan_1}` - `{gan_2}`\n"
+            f"⚡ Đá Xiên: `[{da_1:02d}] - [{da_2:02d}]` | Chạm: `Chạm {cham}`\n"
+            f"🐢 Lô Gan: `{gan_1}` - `{gan_2}`\n"
             f"---------------------------------------"
         )
         part_chitiet.append(station_block)
         
-    part_chitiet.append(f"📊 *Lời khuyên:* Vào tiền hợp lý, phân bổ vốn đều tay!")
+    part_chitiet.append(f"📊 *Lời Khuyên:* Vào tiền hợp lý, phân bổ vốn đều tay!")
     return part_3dai + "\n" + "\n".join(part_chitiet)
 
+# 2. SOI CẦU MIỀN TRUNG
 def generate_mt_report():
-    target_date = datetime.now()
-    today_str = target_date.strftime('%d/%m/%Y')
-    weekday = target_date.weekday()
+    today_str = datetime.now().strftime('%d/%m/%Y')
+    weekday = datetime.now().weekday()
     today_stations = STATIONS_MT.get(weekday, ["Đài Miền Trung 1", "Đài Miền Trung 2"])
     
     _, raw_numbers = fetch_realtime_raw_data("mien-trung")
@@ -143,19 +142,40 @@ def generate_mt_report():
     x_2 = (seed_val + 18) % 89 + 10
     
     part_mt = (
-        f"🏆 *SOI CẦU MIỀN TRUNG* 🏆\n"
+        f"🏆 *Soi Cầu Miền Trung* 🏆\n"
         f"📅 Ngày: `{today_str}` | Các đài: `{station_names_str}`\n"
         f"━━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"🔥 **BTL:** `{btl:02d}` (Lót `{str(btl)[::-1]}`)\n"
-        f"⚡ **STL:** `[{stl_1:02d}] - [{stl_2:02d}]`\n"
+        f"🔥 **Bạch Thủ Lô (BTL):** `{btl:02d}` (Lót `{str(btl)[::-1]}`)\n"
+        f"⚡ **Song Thủ Lô (STL):** `[{stl_1:02d}] - [{stl_2:02d}]`\n"
         f"🎯 **Cặp Xiên:** `[{x_1:02d}] - [{x_2:02d}]`\n"
-        f"📌 **Chạm đề:** `Chạm {btl % 10}`"
+        f"📌 **Chạm Đề Chung:** `Chạm {btl % 10}`"
     )
-    return part_mt
+    
+    part_chitiet = [f"\n📌 *Chi Tiết Từng Đài Miền Trung*:\n━━━━━━━━━━━━━━━━━━━━━━━"]
+    for idx, s_name in enumerate(today_stations, 1):
+        bach_thu = (seed_val + idx * 9) % 80 + 10
+        lot_dao = f"{bach_thu:02d}"[::-1]
+        da_1 = (bach_thu + 10) % 89 + 10
+        da_2 = (bach_thu * 2) % 89 + 10
+        cham = bach_thu % 10
+        gan_1 = (bach_thu + 3) % 30 + 10
+        gan_2 = (bach_thu + 14) % 35 + 20
+        
+        station_block = (
+            f"📍 *Đài {idx}: {s_name.upper()}*\n"
+            f"🔥 BTL: `{bach_thu:02d}` (Lót `{lot_dao}`)\n"
+            f"⚡ Đá Xiên: `[{da_1:02d}] - [{da_2:02d}]` | Chạm: `Chạm {cham}`\n"
+            f"🐢 Lô Gan: `{gan_1}` - `{gan_2}`\n"
+            f"---------------------------------------"
+        )
+        part_chitiet.append(station_block)
+        
+    part_chitiet.append(f"📊 *Lời Khuyên:* Vào tiền hợp lý, phân bổ vốn đều tay!")
+    return part_mt + "\n" + "\n".join(part_chitiet)
 
+# 3. SOI CẦU MIỀN BẮC
 def generate_mb_report():
-    target_date = datetime.now()
-    today_str = target_date.strftime('%d/%m/%Y')
+    today_str = datetime.now().strftime('%d/%m/%Y')
     
     _, raw_numbers = fetch_realtime_raw_data("mien-bac")
     seed_val = int(raw_numbers[0][-2:]) if (raw_numbers and len(raw_numbers[0]) >= 2) else 79
@@ -167,13 +187,18 @@ def generate_mb_report():
     xiên_3 = (seed_val + 33) % 89 + 10
     
     part_mb = (
-        f"🏆 *SOI CẦU MIỀN BẮC* 🏆\n"
+        f"🏆 *Soi Cầu Miền Bắc* 🏆\n"
         f"📅 Ngày: `{today_str}` | Đài: `Hà Nội (Miền Bắc)`\n"
         f"━━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"🔥 **BTL:** `{btl:02d}` (Lót `{str(btl)[::-1]}`)\n"
-        f"⚡ **STL:** `[{stl_1:02d}] - [{stl_2:02d}]`\n"
+        f"🔥 **Bạch Thủ Lô (BTL):** `{btl:02d}` (Lót `{str(btl)[::-1]}`)\n"
+        f"⚡ **Song Thủ Lô (STL):** `[{stl_1:02d}] - [{stl_2:02d}]`\n"
         f"🎯 **Xiên 2 / Xiên 3:** `[{xiên_2:02d}] - [{xiên_3:02d}]`\n"
-        f"📌 **Chạm đề:** `Chạm {btl % 10}`"
+        f"📌 **Chạm Đề:** `Chạm {btl % 10}`\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"📍 *Chi Tiết Đài Hà Nội*\n"
+        f"🔥 BTL: `{btl:02d}` (Lót `{str(btl)[::-1]}`)\n"
+        f"⚡ Lô Gan: `{(btl + 4)%25 + 10}` - `{(btl + 12)%30 + 15}`\n"
+        f"📊 *Lời Khuyên:* Đánh dàn đề và nuôi khung hợp lý!"
     )
     return part_mb
 
@@ -190,7 +215,7 @@ def fetch_realtime_results(region_url, title):
             station_str = " - ".join(stations[:3]) if stations else "Hôm nay"
             
             result_msg = (
-                f"🏆 *KẾT QUẢ {title.upper()} (THỰC TẾ)* 🏆\n"
+                f"🏆 *Kết Quả {title.upper()} (Thực Tế)* 🏆\n"
                 f"📅 Ngày: `{today_str}`\n"
                 f"📍 Các đài: `{station_str}`\n\n"
                 f"✅ *Đồng bộ trực tiếp từ Minh Ngọc.*"
@@ -208,7 +233,7 @@ def schedule_sender_loop():
         if now.hour == AUTO_SEND_HOUR and now.minute == AUTO_SEND_MINUTE:
             if not sent_report_today:
                 full_report = generate_mn_report()
-                send_telegram_message(TELEGRAM_CHAT_ID, f"⏰ *BẢN TIN SOI CẦU MIỀN NAM*\n\n" + full_report)
+                send_telegram_message(TELEGRAM_CHAT_ID, f"⏰ *Bản Tin Soi Cầu Miền Nam*\n\n" + full_report)
                 sent_report_today = True
                 time.sleep(60)
         else:
@@ -217,7 +242,7 @@ def schedule_sender_loop():
         time.sleep(15)
 
 def telegram_listener_loop():
-    print("[+] Lắng nghe lệnh Telegram sạch...")
+    print("[+] Lắng nghe lệnh Telegram...")
     offset = 0
     while True:
         try:
@@ -228,22 +253,25 @@ def telegram_listener_loop():
                 for result in data.get("result", []):
                     offset = result["update_id"] + 1
                     if "message" in result and "text" in result["message"]:
-                        text = result["message"]["text"].strip().lower()
+                        # Giữ nguyên chuỗi gốc để check các dạng viết hoa/thường (Xem, Mn, Mt, Mb,...)
+                        raw_text = result["message"]["text"].strip()
+                        text_lower = raw_text.lower()
                         chat_id = result["message"]["chat"]["id"]
                         
-                        if text in ["xem", "mn", "mien nam", "3dai"]:
+                        # Hỗ trợ cả chữ thường, viết hoa chữ đầu (Xem, Mn, Mt, Mb) và các lệnh tắt
+                        if text_lower in ["xem", "mn", "mien nam", "3dai", "/xem", "/mn"] or raw_text in ["Xem", "Mn"]:
                             report = generate_mn_report()
                             send_telegram_message(chat_id, report)
                             
-                        elif text in ["mt", "mien trung"]:
+                        elif text_lower in ["mt", "mien trung", "/mt"] or raw_text in ["Mt"]:
                             report = generate_mt_report()
                             send_telegram_message(chat_id, report)
                             
-                        elif text in ["mb", "mien bac"]:
+                        elif text_lower in ["mb", "mien bac", "/mb"] or raw_text in ["Mb"]:
                             report = generate_mb_report()
                             send_telegram_message(chat_id, report)
                             
-                        elif text in ["kq", "ketqua", "kết quả"]:
+                        elif text_lower in ["kq", "ketqua", "kết quả", "/kq"]:
                             kq_mn = fetch_realtime_results("mien-nam", "Miền Nam")
                             send_telegram_message(chat_id, kq_mn)
         except Exception as e:
