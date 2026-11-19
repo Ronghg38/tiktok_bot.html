@@ -1,4 +1,5 @@
 import os
+import re
 import time
 import sqlite3
 import threading
@@ -16,6 +17,8 @@ TELEGRAM_BOT_TOKEN = os.environ.get(
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "5931570040")
 BOT_ID = os.environ.get("BOT_ID", "CAUTURONG BOT")
 PORT = int(os.environ.get("PORT", 10000))
+
+# Mặc định 1 giờ gửi một lần (3600 giây)
 AUTO_INTERVAL_SECONDS = int(os.environ.get("AUTO_INTERVAL_SECONDS", 3600))
 
 DB_PATH = os.environ.get("DB_PATH", "cauturong_market.sqlite3")
@@ -23,17 +26,16 @@ VN_TZ = timezone(timedelta(hours=7))
 
 CHOGIA_MOPS_URL = "https://chogia.vn/gia-xang-dau-singapore-hom-nay-38348/"
 STARFISH_MOPS_URL = "https://starfishmyanmar.com/market-price"
-
-# ==================== CẤU HÌNH QUY ĐỔI PLATTS & BÁN LẺ VND ====================
-LITERS_PER_BARREL = 158.9873
-DEFAULT_USD_VND = float(os.environ.get("USD_VND_RATE", 25450))
 GOLD_OFFSET = float(os.environ.get("GOLD_OFFSET", -10.36))
 
-# Tổng thuế nhập khẩu, TTĐB, BVMT, VAT & chi phí định mức (VND/lít) để ước tính giá bán lẻ
-RETAIL_TAX_COST_VND = {
-    "RON95": float(os.environ.get("COST_RON95_VND", 8650)),
-    "RON92": float(os.environ.get("COST_RON92_VND", 8150)),
-    "DIESEL": float(os.environ.get("COST_DIESEL_VND", 4950)),
+BROWSER_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/128.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
 }
 
 app = Flask(__name__)
@@ -82,30 +84,38 @@ def save_snapshot(source, symbol, price, unit="USD/bbl"):
 
 
 def fetch_mops_chogia():
-    """Lấy giá xăng dầu MOPS Singapore từ ChoGia (RON92, RON95, Diesel10, Jet)."""
-    headers = {"User-Agent": "Mozilla/5.0"}
+    """Lấy giá xăng dầu MOPS Singapore từ ChoGia (RON92, RON95, Diesel, Jet)."""
     data = {}
     try:
-        resp = requests.get(CHOGIA_MOPS_URL, headers=headers, timeout=15)
+        resp = requests.get(CHOGIA_MOPS_URL, headers=BROWSER_HEADERS, timeout=15)
         resp.raise_for_status()
         soup = BeautifulSoup(resp.text, "html.parser")
         text = " ".join(soup.get_text(" ").split())
 
-        for key in ["RON 92", "RON92", "RON 95", "RON95", "Diesel", "Gasoil", "Jet"]:
-            idx = text.lower().find(key.lower())
-            if idx != -1:
-                snippet = text[idx : idx + 80]
-                for token in snippet.replace(",", ".").split():
-                    cleaned = token.strip("$:()%-")
-                    try:
-                        val = float(cleaned)
-                        if 30.0 <= val <= 250.0:
-                            norm_key = key.replace(" ", "").upper()
-                            if norm_key not in data:
+        key_map = [
+            (["ron 95", "ron95"], "RON95"),
+            (["ron 92", "ron92"], "RON92"),
+            (["diesel", "gasoil"], "DIESEL"),
+            (["jet"], "JET"),
+        ]
+        for patterns, norm_key in key_map:
+            if norm_key in data:
+                continue
+            for pat in patterns:
+                idx = text.lower().find(pat)
+                if idx != -1:
+                    snippet = text[idx : idx + 100]
+                    for token in snippet.replace(",", ".").split():
+                        cleaned = token.strip("$:()%-")
+                        try:
+                            val = float(cleaned)
+                            if 30.0 <= val <= 250.0:
                                 data[norm_key] = val
-                            break
-                    except ValueError:
-                        continue
+                                break
+                        except ValueError:
+                            continue
+                if norm_key in data:
+                    break
     except Exception as e:
         print(f"[{BOT_ID}] Lỗi lấy dữ liệu ChoGia: {e}")
     return data
@@ -113,31 +123,58 @@ def fetch_mops_chogia():
 
 def fetch_mops_starfish():
     """Lấy dữ liệu tham chiếu giá thị trường/nhiên liệu từ Starfish."""
-    headers = {"User-Agent": "Mozilla/5.0"}
     found = {}
     try:
-        resp = requests.get(STARFISH_MOPS_URL, headers=headers, timeout=15)
+        resp = requests.get(STARFISH_MOPS_URL, headers=BROWSER_HEADERS, timeout=15)
         resp.raise_for_status()
         soup = BeautifulSoup(resp.text, "html.parser")
-        for row in soup.find_all(["tr", "li", "p"]):
+        for row in soup.find_all(["tr", "li", "p", "div"]):
             line = " ".join(row.get_text(" ").split())
+            if len(line) > 140:
+                continue
             low = line.lower()
             if any(k in low for k in ["ron92", "ron 92", "ron95", "ron 95", "diesel", "gasoil", "jet"]):
-                found[line[:60]] = line
-                if len(found) >= 6:
+                found[line[:70]] = line
+                if len(found) >= 8:
                     break
     except Exception as e:
         print(f"[{BOT_ID}] Lỗi lấy dữ liệu Starfish: {e}")
     return found
 
 
+def parse_starfish_mops(mops_sf):
+    """Trích xuất giá MOPS USD/BBL (RON92, RON95, DIESEL) từ dữ liệu Starfish."""
+    extracted = {}
+    for _, text in mops_sf.items():
+        low = text.lower()
+        bbl_match = re.search(r"usd/bbl[^0-9]*(\d+(?:\.\d{1,4})?)", low)
+        if bbl_match:
+            val = float(bbl_match.group(1))
+        else:
+            nums = re.findall(r"\b(\d+(?:\.\d{1,4})?)\b", text)
+            float_nums = [float(n) for n in nums if 25.0 <= float(n) <= 250.0]
+            if not float_nums:
+                continue
+            val = float_nums[0]
+
+        if not (25.0 <= val <= 250.0):
+            continue
+
+        if ("ron 95" in low or "ron95" in low) and "RON95" not in extracted:
+            extracted["RON95"] = val
+        elif ("ron 92" in low or "ron92" in low) and "RON92" not in extracted:
+            extracted["RON92"] = val
+        elif ("diesel" in low or "gasoil" in low) and "DIESEL" not in extracted:
+            extracted["DIESEL"] = val
+    return extracted
+
+
 def fetch_yf_quotes():
-    """Lấy giá dầu WTI (CL=F), Brent (BZ=F), Vàng (GC=F) và tỷ giá USD/VND (VND=X)."""
+    """Lấy giá dầu WTI (CL=F), Brent (BZ=F) và Vàng (GC=F) qua yfinance."""
     tickers = {
         "WTI (CL=F)": "CL=F",
         "Brent (BZ=F)": "BZ=F",
         "Gold (GC=F)": "GC=F",
-        "USD/VND": "VND=X",
     }
     quotes = {}
     for label, sym in tickers.items():
@@ -154,77 +191,57 @@ def fetch_yf_quotes():
     return quotes
 
 
-def calc_vnd_retail_estimate(usd_per_bbl, usd_vnd_rate, fuel_type):
-    """Quy đổi giá MOPS (USD/thùng) sang giá nhập CIF và giá bán lẻ ước tính (VND/lít)."""
-    cif_vnd_per_liter = (usd_per_bbl * usd_vnd_rate) / LITERS_PER_BARREL
-    extra_cost = RETAIL_TAX_COST_VND.get(fuel_type, 8000)
-    retail_vnd_per_liter = cif_vnd_per_liter + extra_cost
-    return round(cif_vnd_per_liter), round(retail_vnd_per_liter)
-
-
 def build_market_report():
     mops_cg = fetch_mops_chogia()
     mops_sf = fetch_mops_starfish()
+    sf_prices = parse_starfish_mops(mops_sf)
     yf_quotes = fetch_yf_quotes()
 
-    usd_vnd = yf_quotes.get("USD/VND", DEFAULT_USD_VND)
-
-    for sym, val in mops_cg.items():
-        save_snapshot("ChoGia_MOPS", sym, val, "USD/bbl")
-    for label, val in yf_quotes.items():
-        unit = "VND" if label == "USD/VND" else "USD"
-        save_snapshot("yfinance", label, val, unit)
-
-    ron95_usd = mops_cg.get("RON95")
-    ron92_usd = mops_cg.get("RON92")
-    diesel_usd = mops_cg.get("DIESEL") or mops_cg.get("GASOIL")
+    ron95_usd = mops_cg.get("RON95") or sf_prices.get("RON95")
+    ron92_usd = mops_cg.get("RON92") or sf_prices.get("RON92")
+    diesel_usd = mops_cg.get("DIESEL") or mops_cg.get("GASOIL") or sf_prices.get("DIESEL")
     jet_usd = mops_cg.get("JET")
 
+    resolved_mops = {
+        "RON95": ron95_usd,
+        "RON92": ron92_usd,
+        "DIESEL": diesel_usd,
+        "JET": jet_usd,
+    }
+    for sym, val in resolved_mops.items():
+        if val is not None:
+            src = "ChoGia_MOPS" if sym in mops_cg else "Starfish_Fallback"
+            save_snapshot(src, sym, val, "USD/bbl")
+
+    for label, val in yf_quotes.items():
+        save_snapshot("yfinance", label, val, "USD")
+
     lines = [
-        f"🛢️ *{BOT_ID} — BẢNG GIÁ PLATTS & QUY ĐỔI VND*",
+        f"🛢️ *{BOT_ID} — BẢNG GIÁ PLATTS & DẦU*",
         f"🕒 Cập nhật (VN): `{now_vn_str()}`",
-        f"💱 Tỷ giá quy đổi: *1 USD = {usd_vnd:,.0f} VND*",
         "────────────────────",
         "*📌 MỐC PLATTS / MOPS SINGAPORE (USD/thùng):*",
     ]
 
     platts_items = [
-        ("Xăng RON 95", ron95_usd),
-        ("Xăng RON 92", ron92_usd),
-        ("Dầu Diesel 0.05S", diesel_usd),
-        ("Nhiên liệu bay Jet A1", jet_usd),
+        ("Xăng RON 95", ron95_usd, "RON95" in mops_cg),
+        ("Xăng RON 92", ron92_usd, "RON92" in mops_cg),
+        ("Dầu Diesel 0.05S", diesel_usd, ("DIESEL" in mops_cg or "GASOIL" in mops_cg)),
+        ("Nhiên liệu bay Jet A1", jet_usd, "JET" in mops_cg),
     ]
     has_platts = False
-    for name, val in platts_items:
+    for name, val, from_cg in platts_items:
         if val is not None:
             has_platts = True
-            lines.append(f"• {name}: *{val:.2f}* USD/bbl")
+            tag = "" if from_cg else " _(Starfish)_"
+            lines.append(f"• {name}: *{val:.2f}* USD/bbl{tag}")
     if not has_platts:
-        lines.append("• Đang đồng bộ dữ liệu Platts từ ChoGia...")
+        lines.append("• Đang đồng bộ dữ liệu Platts...")
 
-    lines.append("")
-    lines.append("*🇻🇳 QUY ĐỔI GIÁ NHẬP & BÁN LẺ ƯỚC TÍNH (VND/lít):*")
-    retail_targets = [
-        ("Xăng RON 95-III", ron95_usd, "RON95"),
-        ("Xăng E5 RON 92", ron92_usd, "RON92"),
-        ("Dầu Diesel 0.05S", diesel_usd, "DIESEL"),
-    ]
-    has_retail = False
-    for label, usd_val, code in retail_targets:
-        if usd_val is not None:
-            has_retail = True
-            cif_vnd, est_retail = calc_vnd_retail_estimate(usd_val, usd_vnd, code)
-            lines.append(
-                f"• {label}: Giá gốc `{cif_vnd:,}đ` → Bán lẻ ~*{est_retail:,} đ/lít*"
-            )
-    if not has_retail:
-        lines.append("• Chưa có dữ liệu MOPS để quy đổi VND.")
-
-    commodity_quotes = {k: v for k, v in yf_quotes.items() if k != "USD/VND"}
-    if commodity_quotes:
+    if yf_quotes:
         lines.append("")
         lines.append("*📈 DẦU THÔ & VÀNG THẾ GIỚI:*")
-        for k, v in commodity_quotes.items():
+        for k, v in yf_quotes.items():
             lines.append(f"• {k}: *{v:,.2f}* USD")
 
     if mops_sf:
@@ -234,7 +251,7 @@ def build_market_report():
             lines.append(f"• `{detail}`")
 
     lines.append("────────────────────")
-    lines.append("_Lệnh nhanh: `/giatien` • `/checknow`_")
+    lines.append("_Tự động cập nhật mỗi 1 giờ • Lệnh: `/giatien` • `/checknow`_")
     return "\n".join(lines)
 
 
@@ -256,6 +273,7 @@ def send_telegram_message(text, chat_id=None):
 
 
 def background_scheduler():
+    """Tự động gửi báo cáo mỗi 1 giờ (AUTO_INTERVAL_SECONDS = 3600)."""
     while True:
         try:
             report = build_market_report()
