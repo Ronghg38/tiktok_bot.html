@@ -18,7 +18,7 @@ TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "5931570040")
 BOT_ID = os.environ.get("BOT_ID", "CAUTURONG BOT")
 PORT = int(os.environ.get("PORT", 10000))
 
-# Mặc định 1 giờ gửi một lần (3600 giây)
+# 1 giờ gửi một lần (3600 giây)
 AUTO_INTERVAL_SECONDS = int(os.environ.get("AUTO_INTERVAL_SECONDS", 3600))
 
 DB_PATH = os.environ.get("DB_PATH", "cauturong_market.sqlite3")
@@ -27,6 +27,12 @@ VN_TZ = timezone(timedelta(hours=7))
 CHOGIA_MOPS_URL = "https://chogia.vn/gia-xang-dau-singapore-hom-nay-38348/"
 STARFISH_MOPS_URL = "https://starfishmyanmar.com/market-price"
 GOLD_OFFSET = float(os.environ.get("GOLD_OFFSET", -10.36))
+
+# Biến động / tham số phiên tùy chỉnh qua Environment Variables trên Render (nếu cần)
+PLATTS_DELTA_92 = os.environ.get("PLATTS_DELTA_92", "")
+PLATTS_DELTA_95 = os.environ.get("PLATTS_DELTA_95", "")
+PLATTS_DELTA_D0 = os.environ.get("PLATTS_DELTA_D0", "")
+SESSION_NOTE = os.environ.get("SESSION_NOTE", "")
 
 BROWSER_HEADERS = {
     "User-Agent": (
@@ -42,8 +48,12 @@ app = Flask(__name__)
 db_lock = threading.Lock()
 
 
+def now_vn_dt():
+    return datetime.now(VN_TZ)
+
+
 def now_vn_str():
-    return datetime.now(VN_TZ).strftime("%Y-%m-%d %H:%M:%S")
+    return now_vn_dt().strftime("%d/%m/%Y %H:%M")
 
 
 def init_db():
@@ -77,10 +87,37 @@ def save_snapshot(source, symbol, price, unit="USD/bbl"):
             INSERT INTO market_snapshots (recorded_at, source, symbol, price, unit)
             VALUES (?, ?, ?, ?, ?)
             """,
-            (now_vn_str(), source, symbol, float(price), unit),
+            (now_vn_dt().strftime("%Y-%m-%d %H:%M:%S"), source, symbol, float(price), unit),
         )
         conn.commit()
         conn.close()
+
+
+def get_previous_price(symbol):
+    """Lấy giá gần nhất trước lần ghi hiện tại để tính chênh lệch tự động."""
+    with db_lock:
+        conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT price FROM market_snapshots
+            WHERE symbol = ?
+            ORDER BY id DESC
+            LIMIT 1 OFFSET 1
+            """,
+            (symbol,),
+        )
+        row = cur.fetchone()
+        conn.close()
+        return float(row[0]) if row else None
+
+
+def format_diff(current_val, prev_val):
+    if current_val is None or prev_val is None:
+        return ""
+    diff = current_val - prev_val
+    sign = "+" if diff >= 0 else ""
+    return f" (`{sign}{diff:.2f}`)"
 
 
 def fetch_mops_chogia():
@@ -172,9 +209,9 @@ def parse_starfish_mops(mops_sf):
 def fetch_yf_quotes():
     """Lấy giá dầu WTI (CL=F), Brent (BZ=F) và Vàng (GC=F) qua yfinance."""
     tickers = {
-        "WTI (CL=F)": "CL=F",
-        "Brent (BZ=F)": "BZ=F",
-        "Gold (GC=F)": "GC=F",
+        "WTI": "CL=F",
+        "Brent": "BZ=F",
+        "Gold": "GC=F",
     }
     quotes = {}
     for label, sym in tickers.items():
@@ -183,7 +220,7 @@ def fetch_yf_quotes():
             hist = t.history(period="2d", interval="1h")
             if hist is not None and not hist.empty:
                 last_price = float(hist["Close"].dropna().iloc[-1])
-                if label == "Gold (GC=F)":
+                if label == "Gold":
                     last_price += GOLD_OFFSET
                 quotes[label] = round(last_price, 2)
         except Exception as e:
@@ -192,21 +229,24 @@ def fetch_yf_quotes():
 
 
 def build_market_report():
+    now_vn = now_vn_dt()
+    date_str = now_vn.strftime("%d/%m/%Y")
+    short_date = now_vn.strftime("%d/%m")
+    time_str = now_vn.strftime("%H:%M")
+
     mops_cg = fetch_mops_chogia()
     mops_sf = fetch_mops_starfish()
     sf_prices = parse_starfish_mops(mops_sf)
     yf_quotes = fetch_yf_quotes()
 
-    ron95_usd = mops_cg.get("RON95") or sf_prices.get("RON95")
-    ron92_usd = mops_cg.get("RON92") or sf_prices.get("RON92")
-    diesel_usd = mops_cg.get("DIESEL") or mops_cg.get("GASOIL") or sf_prices.get("DIESEL")
-    jet_usd = mops_cg.get("JET")
+    ron92_val = mops_cg.get("RON92") or sf_prices.get("RON92")
+    ron95_val = mops_cg.get("RON95") or sf_prices.get("RON95")
+    diesel_val = mops_cg.get("DIESEL") or mops_cg.get("GASOIL") or sf_prices.get("DIESEL")
 
     resolved_mops = {
-        "RON95": ron95_usd,
-        "RON92": ron92_usd,
-        "DIESEL": diesel_usd,
-        "JET": jet_usd,
+        "RON92": ron92_val,
+        "RON95": ron95_val,
+        "DIESEL": diesel_val,
     }
     for sym, val in resolved_mops.items():
         if val is not None:
@@ -217,41 +257,45 @@ def build_market_report():
         save_snapshot("yfinance", label, val, "USD")
 
     lines = [
-        f"🛢️ *{BOT_ID} — BẢNG GIÁ PLATTS & DẦU*",
-        f"🕒 Cập nhật (VN): `{now_vn_str()}`",
+        f"🕒 *Cập nhật: {date_str}*",
+        f"🟢 *{BOT_ID}*: Trực tiếp (cập nhật lúc `{time_str} GMT+7`).",
         "────────────────────",
-        "*📌 MỐC PLATTS / MOPS SINGAPORE (USD/thùng):*",
+        "",
+        "📈 *GIÁ PLATTS & BIẾN ĐỘNG*",
     ]
 
-    platts_items = [
-        ("Xăng RON 95", ron95_usd, "RON95" in mops_cg),
-        ("Xăng RON 92", ron92_usd, "RON92" in mops_cg),
-        ("Dầu Diesel 0.05S", diesel_usd, ("DIESEL" in mops_cg or "GASOIL" in mops_cg)),
-        ("Nhiên liệu bay Jet A1", jet_usd, "JET" in mops_cg),
+    platts_rows = [
+        ("Platts 92", ron92_val, "RON92", PLATTS_DELTA_92),
+        ("Platts 95", ron95_val, "RON95", PLATTS_DELTA_95),
+        ("Platts D0", diesel_val, "DIESEL", PLATTS_DELTA_D0),
     ]
     has_platts = False
-    for name, val, from_cg in platts_items:
+    for label, val, sym, custom_delta in platts_rows:
         if val is not None:
             has_platts = True
-            tag = "" if from_cg else " _(Starfish)_"
-            lines.append(f"• {name}: *{val:.2f}* USD/bbl{tag}")
+            delta_text = custom_delta.strip()
+            if not delta_text:
+                prev_val = get_previous_price(sym)
+                delta_text = format_diff(val, prev_val).strip()
+            extra = f" : {delta_text}" if delta_text else ""
+            lines.append(f"▪ *{label}* : *{val:.2f}* USD/bbl{extra}")
     if not has_platts:
-        lines.append("• Đang đồng bộ dữ liệu Platts...")
+        lines.append("▪ Đang cập nhật dữ liệu Platts...")
 
     if yf_quotes:
         lines.append("")
-        lines.append("*📈 DẦU THÔ & VÀNG THẾ GIỚI:*")
-        for k, v in yf_quotes.items():
-            lines.append(f"• {k}: *{v:,.2f}* USD")
+        lines.append(f"📍 *DẦU & VÀNG PHIÊN HIỆN TẠI ({short_date})*")
+        for label, val in yf_quotes.items():
+            prev_val = get_previous_price(label)
+            diff_str = format_diff(val, prev_val)
+            lines.append(f"▪ *{label}* : *{val:,.2f}* USD{diff_str}")
 
-    if mops_sf:
+    if SESSION_NOTE.strip():
         lines.append("")
-        lines.append("*🌐 THAM CHIẾU STARFISH:*")
-        for _, detail in list(mops_sf.items())[:3]:
-            lines.append(f"• `{detail}`")
+        lines.append(f"📝 _{SESSION_NOTE.strip()}_")
 
     lines.append("────────────────────")
-    lines.append("_Tự động cập nhật mỗi 1 giờ • Lệnh: `/giatien` • `/checknow`_")
+    lines.append("_Mỗi 1 giờ/lần • Lệnh: `/giatien` • `/checknow`_")
     return "\n".join(lines)
 
 
@@ -285,7 +329,7 @@ def background_scheduler():
 
 @app.route("/", methods=["GET"])
 def health_check():
-    return jsonify({"status": "online", "bot": BOT_ID, "time_vn": now_vn_str()}), 200
+    return jsonify({"status": "online", "bot": BOT_ID, "time_vn": now_vn_dt().strftime("%Y-%m-%d %H:%M:%S")}), 200
 
 
 @app.route("/webhook", methods=["POST"])
